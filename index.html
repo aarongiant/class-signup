@@ -471,6 +471,16 @@
       const timesEl = document.getElementById('windowTimes');
       const countdownEl = document.getElementById('windowCountdown');
 
+      // 즉시 ON이면 시간 제한 박스 숨김 (제한 없이 항상 가능)
+      if (settings.signupAlways) {
+        box.style.display = 'none';
+        if (lastWindowState !== null) {
+          lastWindowState = null;
+          renderCalendar();
+        }
+        return;
+      }
+
       const w = settings.signupOpen;
       if (!w || !w.enabled) {
         box.style.display = 'none';
@@ -628,7 +638,11 @@
     }
 
     function isSignupOpen() {
+      // 즉시 ON이면 무조건 가능
+      if (settings.signupAlways) return true;
+      // 일정 예약이 꺼져있으면 항상 가능 (둘 다 비활성 = 무제한)
       if (!settings.signupOpen || !settings.signupOpen.enabled) return true;
+      // 일정 예약 범위 내인지 체크
       const now = getKSTNow();
       const start = new Date(settings.signupOpen.start);
       const end = new Date(settings.signupOpen.end);

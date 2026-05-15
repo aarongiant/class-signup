@@ -203,28 +203,46 @@
       <h3 style="margin-bottom: 15px;">🔓 수강신청 오픈 시간 설정</h3>
       <p style="margin-bottom: 20px; color: #666;">
         설정한 시간에만 수강생이 신청할 수 있습니다. (한국시간 기준)<br>
-        ※ <strong>비활성화</strong>하면 항상 신청 가능합니다.
+        ※ 즉시 ON 또는 일정 예약 중 <strong>하나라도</strong> 활성이면 신청 가능합니다.
       </p>
 
-      <div class="input-group">
+      <!-- 즉시 ON/OFF -->
+      <div style="background: #f5f5f5; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+        <h4 style="margin-bottom: 10px; color: #1a4d8f;">⚡ 즉시 ON/OFF</h4>
+        <p style="font-size: 13px; color: #666; margin-bottom: 10px;">지금 바로 신청을 열거나 닫습니다 (일정과 별개로 동작)</p>
         <div class="toggle-switch">
-          <input type="checkbox" id="windowEnabled">
-          <label for="windowEnabled" style="cursor:pointer;">신청 시간 제한 활성화</label>
+          <input type="checkbox" id="signupAlwaysToggle">
+          <label for="signupAlwaysToggle" style="cursor:pointer; font-size: 16px;">신청 즉시 ON/OFF</label>
         </div>
       </div>
 
-      <div id="windowDetails">
-        <div class="input-group">
-          <label>오픈 시작 시각</label>
-          <input type="datetime-local" id="windowStart" style="padding: 8px; font-size: 15px;">
-        </div>
-        <div class="input-group">
-          <label>오픈 종료 시각</label>
-          <input type="datetime-local" id="windowEnd" style="padding: 8px; font-size: 15px;">
-        </div>
-      </div>
+      <!-- 일정 예약 -->
+      <div style="background: #f5f5f5; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+        <h4 style="margin-bottom: 10px; color: #1a4d8f;">📅 일정 예약</h4>
+        <p style="font-size: 13px; color: #666; margin-bottom: 10px;">
+          설정한 시각에 자동으로 신청이 열리고 종료 시각에 자동으로 닫힙니다. (한국시간 기준)
+        </p>
 
-      <button class="btn btn-primary" id="saveWindowBtn" style="margin-top: 10px;">저장</button>
+        <div class="input-group">
+          <div class="toggle-switch">
+            <input type="checkbox" id="windowEnabled">
+            <label for="windowEnabled" style="cursor:pointer;">일정 예약 활성화</label>
+          </div>
+        </div>
+
+        <div id="windowDetails">
+          <div class="input-group">
+            <label>오픈 시작 시각</label>
+            <input type="datetime-local" id="windowStart" style="padding: 8px; font-size: 15px;">
+          </div>
+          <div class="input-group">
+            <label>오픈 종료 시각</label>
+            <input type="datetime-local" id="windowEnd" style="padding: 8px; font-size: 15px;">
+          </div>
+        </div>
+
+        <button class="btn btn-primary" id="saveWindowBtn" style="margin-top: 10px;">저장</button>
+      </div>
 
       <div id="windowStatus" style="margin-top: 20px; padding: 12px; background: #f5f5f5; border-radius: 4px;"></div>
     </div>
@@ -516,7 +534,10 @@
       const windowStartEl = document.getElementById('windowStart');
       const windowEndEl = document.getElementById('windowEnd');
 
-      // 토글은 사용자가 만진 후 저장 전이면 그대로 둠
+      // 즉시 ON/OFF 토글 표시
+      document.getElementById('signupAlwaysToggle').checked = settings.signupAlways || false;
+
+      // 일정 예약 토글은 사용자가 만진 후 저장 전이면 그대로 둠
       if (!enabledCheck.dataset.userTouched) {
         if (window && window.enabled) {
           enabledCheck.checked = true;
@@ -535,25 +556,30 @@
         windowEndEl.value = window.end.substring(0, 16);
       }
 
-      // 상태 박스는 항상 갱신 (이건 사용자 입력이 아님)
-      if (window && window.enabled) {
-        const now = getKSTNow();
-        const start = new Date(window.start);
-        const end = new Date(window.end);
-        let status = '';
-        if (now < start) {
-          status = `⏳ 신청 대기 중 (오픈까지 ${formatDuration(start - now)} 남음)`;
-        } else if (now > end) {
-          status = `🔒 신청 마감됨`;
+      // 상태 박스 - 즉시 ON 또는 일정 진행중이면 활성, 아니면 비활성
+      const nowK = getKSTNow();
+      const alwaysOn = settings.signupAlways;
+      const scheduleInProgress = window && window.enabled && nowK >= new Date(window.start) && nowK <= new Date(window.end);
+      const effectiveSignup = alwaysOn || scheduleInProgress || !(window && window.enabled);
+
+      let signupStatusHTML = '';
+      if (alwaysOn && scheduleInProgress) {
+        signupStatusHTML = '<strong style="color:#2e7d32;">🟢 신청 가능 (즉시 ON + 일정 진행 중)</strong>';
+      } else if (alwaysOn) {
+        signupStatusHTML = '<strong style="color:#2e7d32;">🟢 신청 가능 (즉시 ON)</strong>';
+      } else if (window && window.enabled) {
+        if (nowK < new Date(window.start)) {
+          signupStatusHTML = `<strong style="color:#f57c00;">⏳ 신청 대기 중</strong> (오픈까지 ${formatDuration(new Date(window.start) - nowK)} 남음)`;
+        } else if (nowK > new Date(window.end)) {
+          signupStatusHTML = '<strong style="color:#c62828;">🔒 신청 마감됨</strong>';
         } else {
-          status = `🟢 신청 오픈 중 (마감까지 ${formatDuration(end - now)} 남음)`;
+          signupStatusHTML = `<strong style="color:#2e7d32;">🟢 신청 오픈 중</strong> (마감까지 ${formatDuration(new Date(window.end) - nowK)} 남음)`;
         }
-        windowStatusEl.innerHTML = `<strong>현재 상태:</strong> ${status}<br>
-          오픈: ${start.toLocaleString('ko-KR')}<br>
-          마감: ${end.toLocaleString('ko-KR')}`;
+        signupStatusHTML += `<br><small>📅 일정: ${new Date(window.start).toLocaleString('ko-KR')} ~ ${new Date(window.end).toLocaleString('ko-KR')}</small>`;
       } else {
-        windowStatusEl.innerHTML = '<strong>현재 상태:</strong> 🟢 항상 신청 가능 (시간 제한 없음)';
+        signupStatusHTML = '<strong style="color:#c62828;">🔒 신청 닫힘</strong> <small>(즉시 ON, 일정 예약 모두 꺼져있음)</small>';
       }
+      windowStatusEl.innerHTML = signupStatusHTML;
     }
 
     function formatDuration(ms) {
@@ -656,6 +682,26 @@
     };
 
     // ============== 신청 오픈 시간 ==============
+    // 즉시 ON/OFF 토글
+    document.getElementById('signupAlwaysToggle').onchange = async (e) => {
+      const isOn = e.target.checked;
+      const msg = isOn
+        ? '수강신청을 즉시 오픈하시겠습니까? 일정과 별개로 누구나 신청 가능해집니다.'
+        : '즉시 ON을 끄시겠습니까? (일정 예약은 그대로 유지됩니다)';
+      if (!confirm(msg)) {
+        e.target.checked = !isOn;
+        return;
+      }
+      try {
+        await setDoc(doc(db, 'settings', 'main'), { ...settings, signupAlways: isOn }, { merge: true });
+        showToast(isOn ? '신청 즉시 ON' : '신청 즉시 OFF', 'success');
+      } catch (err) {
+        showToast('오류: ' + err.message, 'error');
+        e.target.checked = !isOn;
+      }
+    };
+
+    // 일정 예약 토글
     document.getElementById('windowEnabled').onchange = (e) => {
       e.target.dataset.userTouched = 'true';
       const details = document.getElementById('windowDetails');
