@@ -439,18 +439,26 @@
       const sched = settings.editSchedule;
       const schedCheck = document.getElementById('editScheduleEnabled');
       const schedDetails = document.getElementById('editScheduleDetails');
+      const schedStartEl = document.getElementById('editScheduleStart');
+      const schedEndEl = document.getElementById('editScheduleEnd');
 
       // 토글 상태는 사용자가 만진 후 저장 전이면 그대로 둠
       if (!schedCheck.dataset.userTouched) {
         if (sched && sched.enabled) {
           schedCheck.checked = true;
           schedDetails.style.display = 'block';
-          if (sched.start) document.getElementById('editScheduleStart').value = sched.start.substring(0, 16);
-          if (sched.end) document.getElementById('editScheduleEnd').value = sched.end.substring(0, 16);
         } else {
           schedCheck.checked = false;
           schedDetails.style.display = 'none';
         }
+      }
+
+      // 시간 입력란도 사용자가 만지면 덮어쓰지 않음
+      if (!schedStartEl.dataset.userTouched && sched && sched.start) {
+        schedStartEl.value = sched.start.substring(0, 16);
+      }
+      if (!schedEndEl.dataset.userTouched && sched && sched.end) {
+        schedEndEl.value = sched.end.substring(0, 16);
       }
 
       // 정정 모드 상태 박스
@@ -491,18 +499,26 @@
       const enabledCheck = document.getElementById('windowEnabled');
       const detailsEl = document.getElementById('windowDetails');
       const windowStatusEl = document.getElementById('windowStatus');
+      const windowStartEl = document.getElementById('windowStart');
+      const windowEndEl = document.getElementById('windowEnd');
 
-      // 토글/입력값은 사용자가 만진 후 저장 전이면 그대로 둠
+      // 토글은 사용자가 만진 후 저장 전이면 그대로 둠
       if (!enabledCheck.dataset.userTouched) {
         if (window && window.enabled) {
           enabledCheck.checked = true;
           detailsEl.style.display = 'block';
-          if (window.start) document.getElementById('windowStart').value = window.start.substring(0, 16);
-          if (window.end) document.getElementById('windowEnd').value = window.end.substring(0, 16);
         } else {
           enabledCheck.checked = false;
           detailsEl.style.display = 'none';
         }
+      }
+
+      // 시간 입력란도 사용자가 만지면 덮어쓰지 않음
+      if (!windowStartEl.dataset.userTouched && window && window.start) {
+        windowStartEl.value = window.start.substring(0, 16);
+      }
+      if (!windowEndEl.dataset.userTouched && window && window.end) {
+        windowEndEl.value = window.end.substring(0, 16);
       }
 
       // 상태 박스는 항상 갱신 (이건 사용자 입력이 아님)
@@ -560,6 +576,13 @@
       e.target.dataset.userTouched = 'true';
       document.getElementById('editScheduleDetails').style.display = e.target.checked ? 'block' : 'none';
     };
+    // 시간 입력란이 변경되면 사용자 수정 플래그 설정
+    document.getElementById('editScheduleStart').oninput = (e) => {
+      e.target.dataset.userTouched = 'true';
+    };
+    document.getElementById('editScheduleEnd').oninput = (e) => {
+      e.target.dataset.userTouched = 'true';
+    };
 
     document.getElementById('saveEditScheduleBtn').onclick = async () => {
       const enabled = document.getElementById('editScheduleEnabled').checked;
@@ -582,8 +605,10 @@
           ? { enabled: true, start: new Date(start).toISOString(), end: new Date(end).toISOString() }
           : { enabled: false };
         await setDoc(doc(db, 'settings', 'main'), { ...settings, editSchedule: newEditSchedule }, { merge: true });
-        // 저장 완료 → 사용자 입력 플래그 해제 (이제 서버 값과 동기화)
+        // 저장 완료 → 모든 사용자 입력 플래그 해제
         delete document.getElementById('editScheduleEnabled').dataset.userTouched;
+        delete document.getElementById('editScheduleStart').dataset.userTouched;
+        delete document.getElementById('editScheduleEnd').dataset.userTouched;
         showToast('저장되었습니다', 'success');
       } catch (err) {
         showToast('오류: ' + err.message, 'error');
@@ -594,6 +619,12 @@
     document.getElementById('windowEnabled').onchange = (e) => {
       e.target.dataset.userTouched = 'true';
       document.getElementById('windowDetails').style.display = e.target.checked ? 'block' : 'none';
+    };
+    document.getElementById('windowStart').oninput = (e) => {
+      e.target.dataset.userTouched = 'true';
+    };
+    document.getElementById('windowEnd').oninput = (e) => {
+      e.target.dataset.userTouched = 'true';
     };
 
     document.getElementById('saveWindowBtn').onclick = async () => {
@@ -617,8 +648,10 @@
           ? { enabled: true, start: new Date(start).toISOString(), end: new Date(end).toISOString() }
           : { enabled: false };
         await setDoc(doc(db, 'settings', 'main'), { ...settings, signupOpen: newSignupOpen }, { merge: true });
-        // 저장 완료 → 사용자 입력 플래그 해제
+        // 저장 완료 → 모든 사용자 입력 플래그 해제
         delete document.getElementById('windowEnabled').dataset.userTouched;
+        delete document.getElementById('windowStart').dataset.userTouched;
+        delete document.getElementById('windowEnd').dataset.userTouched;
         showToast('저장되었습니다', 'success');
       } catch (err) {
         showToast('오류: ' + err.message, 'error');
