@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+  <meta name="googlebot" content="noindex, nofollow">
+  <title>거인영어 - 관리자</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .login-screen {
+      max-width: 400px;
+      margin: 100px auto;
+      padding: 40px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .admin-content { display: none; }
+    .admin-content.active { display: block; }
+
+    .admin-cal-cell {
+      min-height: 110px;
+      padding: 6px;
+      border: 1px solid #e0e0e0;
+      background: white;
+      font-size: 11px;
+      vertical-align: top;
+    }
+    .admin-cal-cell.other-month { background: #f9f9f9; opacity: 0.4; }
+    .admin-cal-cell.holiday-cell { background: #ffebee; }
+    .admin-cal-cell .day-num { font-weight: bold; margin-bottom: 4px; font-size: 13px; }
+    .admin-cal-cell.sunday .day-num { color: #d32f2f; }
+    .admin-cal-cell.saturday .day-num { color: #1976d2; }
+
+    .time-entry {
+      padding: 2px 4px;
+      margin: 1px 0;
+      border-radius: 3px;
+      font-size: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 2px;
+    }
+    .time-entry.empty {
+      background: #e8f0fe;
+      color: #1a4d8f;
+    }
+    .time-entry .remove-btn {
+      background: none;
+      border: none;
+      color: #c62828;
+      cursor: pointer;
+      padding: 0;
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    .add-time-btn, .holiday-btn {
+      width: 100%;
+      padding: 2px;
+      margin-top: 3px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 10px;
+      border: 1px dashed #999;
+    }
+    .add-time-btn { background: #f0f0f0; }
+    .holiday-btn { background: #ffebee; border-color: #c62828; color: #c62828; }
+    .holiday-btn.active { background: #c62828; color: white; }
+
+    .bulk-section {
+      background: #f5f5f5;
+      padding: 15px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+    }
+    .bulk-section h4 { margin-bottom: 10px; color: #1a4d8f; font-size: 15px; }
+
+    .weekday-checks {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 10px 0;
+    }
+    .weekday-checks label {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 14px;
+    }
+
+    .signup-card {
+      background: #f5f9ff;
+      padding: 12px;
+      border-left: 4px solid #1a4d8f;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+    .signup-card .date-time { font-weight: bold; color: #1a4d8f; }
+    .signup-card .name { color: #c62828; margin-top: 4px; font-weight: bold; }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .stat-box {
+      background: white;
+      padding: 12px;
+      border-radius: 6px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .stat-box .label { font-size: 12px; color: #666; }
+    .stat-box .value { font-size: 22px; font-weight: bold; color: #1a4d8f; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <!-- 로그인 화면 -->
+  <div class="container" id="loginScreen">
+    <div class="login-screen">
+      <h1 style="color: #1a4d8f; margin-bottom: 20px;">🔒 관리자 로그인</h1>
+      <input type="password" id="adminPassword" placeholder="비밀번호" style="width: 100%; padding: 12px; font-size: 16px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px;">
+      <button class="btn btn-primary" id="loginBtn" style="width: 100%; padding: 12px;">로그인</button>
+      <p style="margin-top: 15px; font-size: 13px; color: #999;">
+        <a href="index.html" style="color: #1a4d8f;">← 수강신청 페이지로</a>
+      </p>
+    </div>
+  </div>
+
+  <!-- 관리자 본체 -->
+  <div class="container admin-content" id="adminContent">
+    <div class="header">
+      <h1>거인영어 관리자</h1>
+      <p class="subtitle">
+        <a href="index.html" style="color: #1a4d8f;" target="_blank">수강생 페이지 열기 ↗</a>
+        &nbsp;|&nbsp;
+        <a href="#" id="logoutBtn" style="color: #c62828;">로그아웃</a>
+      </p>
+    </div>
+
+    <div class="admin-tabs">
+      <button class="admin-tab active" data-tab="schedule">📅 수업 시간 관리</button>
+      <button class="admin-tab" data-tab="window">🔓 신청 오픈 시간</button>
+      <button class="admin-tab" data-tab="editmode">🔄 정정 모드</button>
+      <button class="admin-tab" data-tab="bookings">📊 신청 현황</button>
+      <button class="admin-tab" data-tab="export">📤 캘린더 내보내기</button>
+    </div>
+
+    <!-- 수업 시간 관리 -->
+    <div class="admin-panel active" id="panel-schedule">
+      <div class="month-nav">
+        <button id="adminPrevMonth">◀</button>
+        <div class="month-title" id="adminMonthTitle"></div>
+        <button id="adminNextMonth">▶</button>
+      </div>
+
+      <div class="bulk-section">
+        <h4>📋 패턴으로 일괄 입력</h4>
+        <p style="font-size: 13px; color: #666; margin-bottom: 8px;">선택한 요일에 같은 시간을 한꺼번에 추가합니다.</p>
+        <div class="weekday-checks">
+          <label><input type="checkbox" class="weekday-check" value="0"> 일</label>
+          <label><input type="checkbox" class="weekday-check" value="1"> 월</label>
+          <label><input type="checkbox" class="weekday-check" value="2"> 화</label>
+          <label><input type="checkbox" class="weekday-check" value="3"> 수</label>
+          <label><input type="checkbox" class="weekday-check" value="4"> 목</label>
+          <label><input type="checkbox" class="weekday-check" value="5"> 금</label>
+          <label><input type="checkbox" class="weekday-check" value="6"> 토</label>
+        </div>
+        <div class="input-row">
+          <input type="text" id="bulkTimes" placeholder="예: 1430,1630,1900" style="flex: 1; min-width: 200px;">
+          <button class="btn btn-primary" id="bulkAddBtn">일괄 추가</button>
+          <button class="btn btn-danger" id="bulkClearBtn">전체 초기화</button>
+        </div>
+        <p style="font-size: 12px; color: #999; margin-top: 5px;">※ HHMM 형식, 콤마(,)로 구분</p>
+      </div>
+
+      <p style="margin-bottom: 10px; font-size: 13px; color: #666;">
+        💡 각 날짜에서 시간을 개별 추가하거나, 휴일로 지정할 수 있습니다.
+      </p>
+
+      <div class="calendar">
+        <div class="calendar-header">
+          <div class="day-name sunday">일</div>
+          <div class="day-name">월</div>
+          <div class="day-name">화</div>
+          <div class="day-name">수</div>
+          <div class="day-name">목</div>
+          <div class="day-name">금</div>
+          <div class="day-name saturday">토</div>
+        </div>
+        <div class="calendar-grid" id="adminCalendarGrid"></div>
+      </div>
+    </div>
+
+    <!-- 신청 오픈 시간 -->
+    <div class="admin-panel" id="panel-window">
+      <h3 style="margin-bottom: 15px;">🔓 수강신청 오픈 시간 설정</h3>
+      <p style="margin-bottom: 20px; color: #666;">
+        설정한 시간에만 수강생이 신청할 수 있습니다. (한국시간 기준)<br>
+        ※ <strong>비활성화</strong>하면 항상 신청 가능합니다.
+      </p>
+
+      <div class="input-group">
+        <div class="toggle-switch">
+          <input type="checkbox" id="windowEnabled">
+          <label for="windowEnabled" style="cursor:pointer;">신청 시간 제한 활성화</label>
+        </div>
+      </div>
+
+      <div id="windowDetails">
+        <div class="input-group">
+          <label>오픈 시작 시각</label>
+          <input type="datetime-local" id="windowStart" style="padding: 8px; font-size: 15px;">
+        </div>
+        <div class="input-group">
+          <label>오픈 종료 시각</label>
+          <input type="datetime-local" id="windowEnd" style="padding: 8px; font-size: 15px;">
+        </div>
+        <button class="btn btn-primary" id="saveWindowBtn">저장</button>
+      </div>
+
+      <div id="windowStatus" style="margin-top: 20px; padding: 12px; background: #f5f5f5; border-radius: 4px;"></div>
+    </div>
+
+    <!-- 정정 모드 -->
+    <div class="admin-panel" id="panel-editmode">
+      <h3 style="margin-bottom: 15px;">🔄 수강정정 모드</h3>
+      <p style="margin-bottom: 20px; color: #666;">
+        정정 모드를 켜면 수강생이 본인의 신청을 취소하고 다른 시간으로 변경할 수 있습니다.<br>
+        취소 횟수와 신청 횟수가 같아야만 변경이 확정됩니다.
+      </p>
+
+      <div class="input-group" style="font-size: 18px;">
+        <div class="toggle-switch">
+          <input type="checkbox" id="editModeToggle">
+          <label for="editModeToggle" style="cursor:pointer; font-size: 16px;">정정 모드 ON/OFF</label>
+        </div>
+      </div>
+
+      <div id="editModeStatus" style="margin-top: 20px; padding: 15px; border-radius: 6px;"></div>
+    </div>
+
+    <!-- 신청 현황 -->
+    <div class="admin-panel" id="panel-bookings">
+      <div class="month-nav">
+        <button id="bookingsPrevMonth">◀</button>
+        <div class="month-title" id="bookingsMonthTitle"></div>
+        <button id="bookingsNextMonth">▶</button>
+      </div>
+
+      <div class="stats-row" id="bookingStats"></div>
+
+      <h3 style="margin-bottom: 10px;">📋 전체 신청 목록</h3>
+      <div id="bookingsList"></div>
+    </div>
+
+    <!-- 구글 캘린더 내보내기 -->
+    <div class="admin-panel" id="panel-export">
+      <h3 style="margin-bottom: 15px;">📤 구글 캘린더로 내보내기</h3>
+      <p style="margin-bottom: 20px; color: #666;">
+        선택한 월의 모든 수강 신청을 ICS 파일로 다운로드합니다.<br>
+        다운로드 후 구글 캘린더에서 <strong>설정 → 가져오기</strong>로 추가할 수 있습니다.<br>
+        <small>※ 이벤트 제목 형식: "OOO 자율수강" / 수업 길이: 90분</small>
+      </p>
+
+      <div class="input-group">
+        <label>내보낼 월 선택</label>
+        <input type="month" id="exportMonth" style="padding: 10px; font-size: 16px;">
+      </div>
+
+      <button class="btn btn-success" id="exportBtn" style="padding: 12px 24px; font-size: 16px;">
+        📥 ICS 파일 다운로드
+      </button>
+
+      <div id="exportInfo" style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 4px;"></div>
+
+      <div style="margin-top: 30px; padding: 15px; background: #e8f5e9; border-radius: 6px; border-left: 4px solid #2e7d32;">
+        <h4 style="color: #2e7d32; margin-bottom: 10px;">📌 구글 캘린더에 가져오는 방법</h4>
+        <ol style="margin-left: 20px; line-height: 1.8;">
+          <li>위 버튼으로 ICS 파일 다운로드</li>
+          <li>구글 캘린더 (calendar.google.com) 접속</li>
+          <li>오른쪽 위 ⚙️ 설정 → "가져오기 및 내보내기"</li>
+          <li>"파일에서 가져오기" → 다운로드한 ICS 파일 선택</li>
+          <li>추가할 캘린더 선택 후 "가져오기"</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- 토스트 -->
+  <div class="toast" id="toast"></div>
+
+  <script type="module">
+    import { db } from './firebase-config.js';
+    import { nameToColor, getKSTNow, dateKey, monthKey, formatTime, addMinutes } from './utils.js';
+    import {
+      collection, doc, getDoc, getDocs, setDoc, deleteDoc, updateDoc,
+      onSnapshot, runTransaction
+    } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+
+    const ADMIN_PASSWORD = '091984';
+    const SESSION_KEY = 'geoin_admin_session';
+
+    let currentAdminDate = new Date();
+    let currentBookingsDate = new Date();
+    let adminMonthData = {};
+    let bookingsMonthData = {};
+    let settings = { editMode: false, signupOpen: null };
+
+    // 로그인 처리
+    function checkLogin() {
+      const session = sessionStorage.getItem(SESSION_KEY);
+      if (session === 'authenticated') {
+        showAdmin();
+      } else {
+        document.getElementById('loginScreen').style.display = 'block';
+        document.getElementById('adminContent').classList.remove('active');
+      }
+    }
+
+    function showAdmin() {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('adminContent').classList.add('active');
+      initAdmin();
+    }
+
+    document.getElementById('loginBtn').onclick = () => {
+      const pw = document.getElementById('adminPassword').value;
+      if (pw === ADMIN_PASSWORD) {
+        sessionStorage.setItem(SESSION_KEY, 'authenticated');
+        showAdmin();
+      } else {
+        showToast('비밀번호가 틀렸습니다', 'error');
+        document.getElementById('adminPassword').value = '';
+      }
+    };
+
+    document.getElementById('adminPassword').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') document.getElementById('loginBtn').click();
+    });
+
+    document.getElementById('logoutBtn').onclick = (e) => {
+      e.preventDefault();
+      sessionStorage.removeItem(SESSION_KEY);
+      location.reload();
+    };
+
+    function showToast(message, type = '') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = 'toast show ' + type;
+      setTimeout(() => { toast.className = 'toast'; }, 3000);
+    }
+
+    // ============== 탭 전환 ==============
+    document.querySelectorAll('.admin-tab').forEach(tab => {
+      tab.onclick = () => {
+        document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+
+        if (tab.dataset.tab === 'bookings') loadBookings();
+        if (tab.dataset.tab === 'export') initExportPanel();
+      };
+    });
+
+    function initAdmin() {
+      loadSettings();
+      loadAdminMonth();
+    }
+
+    // ============== 설정 로드 ==============
+    function loadSettings() {
+      const ref = doc(db, 'settings', 'main');
+      onSnapshot(ref, (snap) => {
+        if (snap.exists()) {
+          settings = snap.data();
+        } else {
+          settings = { editMode: false, signupOpen: null };
+        }
+        updateSettingsUI();
+      });
+    }
+
+    function updateSettingsUI() {
+      // 정정 모드 토글
+      document.getElementById('editModeToggle').checked = settings.editMode || false;
+      const statusEl = document.getElementById('editModeStatus');
+      if (settings.editMode) {
+        statusEl.style.background = '#fff3cd';
+        statusEl.style.border = '2px solid #ffc107';
+        statusEl.innerHTML = '<strong style="color:#856404;">⚠️ 정정 모드가 활성화되어 있습니다.</strong><br>수강생은 본인 신청을 취소/변경할 수 있습니다.';
+      } else {
+        statusEl.style.background = '#e8f5e9';
+        statusEl.style.border = '2px solid #2e7d32';
+        statusEl.innerHTML = '<strong style="color:#2e7d32;">✅ 정정 모드가 비활성화되어 있습니다.</strong><br>수강생은 신규 신청만 할 수 있고 취소는 불가합니다.';
+      }
+
+      // 신청 오픈 시간
+      const window = settings.signupOpen;
+      const enabledCheck = document.getElementById('windowEnabled');
+      const detailsEl = document.getElementById('windowDetails');
+      const windowStatusEl = document.getElementById('windowStatus');
+
+      if (window && window.enabled) {
+        enabledCheck.checked = true;
+        detailsEl.style.display = 'block';
+        if (window.start) document.getElementById('windowStart').value = window.start.substring(0, 16);
+        if (window.end) document.getElementById('windowEnd').value = window.end.substring(0, 16);
+
+        const now = getKSTNow();
+        const start = new Date(window.start);
+        const end = new Date(window.end);
+        let status = '';
+        if (now < start) {
+          status = `⏳ 신청 대기 중 (오픈까지 ${formatDuration(start - now)} 남음)`;
+        } else if (now > end) {
+          status = `🔒 신청 마감됨`;
+        } else {
+          status = `🟢 신청 오픈 중 (마감까지 ${formatDuration(end - now)} 남음)`;
+        }
+        windowStatusEl.innerHTML = `<strong>현재 상태:</strong> ${status}<br>
+          오픈: ${start.toLocaleString('ko-KR')}<br>
+          마감: ${end.toLocaleString('ko-KR')}`;
+      } else {
+        enabledCheck.checked = false;
+        detailsEl.style.display = 'none';
+        windowStatusEl.innerHTML = '<strong>현재 상태:</strong> 🟢 항상 신청 가능 (시간 제한 없음)';
+      }
+    }
+
+    function formatDuration(ms) {
+      const sec = Math.floor(ms / 1000);
+      const days = Math.floor(sec / 86400);
+      const hours = Math.floor((sec % 86400) / 3600);
+      const mins = Math.floor((sec % 3600) / 60);
+      if (days > 0) return `${days}일 ${hours}시간`;
+      if (hours > 0) return `${hours}시간 ${mins}분`;
+      return `${mins}분`;
+    }
+
+    // ============== 정정 모드 토글 ==============
+    document.getElementById('editModeToggle').onchange = async (e) => {
+      const isOn = e.target.checked;
+      const msg = isOn
+        ? '정정 모드를 켜시겠습니까? 수강생이 신청 취소 및 변경을 할 수 있게 됩니다.'
+        : '정정 모드를 끄시겠습니까?';
+      if (!confirm(msg)) {
+        e.target.checked = !isOn;
+        return;
+      }
+      try {
+        await setDoc(doc(db, 'settings', 'main'), { ...settings, editMode: isOn }, { merge: true });
+        showToast(isOn ? '정정 모드 ON' : '정정 모드 OFF', 'success');
+      } catch (err) {
+        showToast('오류: ' + err.message, 'error');
+        e.target.checked = !isOn;
+      }
+    };
+
+    // ============== 신청 오픈 시간 ==============
+    document.getElementById('windowEnabled').onchange = (e) => {
+      document.getElementById('windowDetails').style.display = e.target.checked ? 'block' : 'none';
+    };
+
+    document.getElementById('saveWindowBtn').onclick = async () => {
+      const enabled = document.getElementById('windowEnabled').checked;
+      const start = document.getElementById('windowStart').value;
+      const end = document.getElementById('windowEnd').value;
+
+      if (enabled) {
+        if (!start || !end) {
+          showToast('시작/종료 시각을 모두 입력하세요', 'error');
+          return;
+        }
+        if (new Date(start) >= new Date(end)) {
+          showToast('종료 시각은 시작보다 늦어야 합니다', 'error');
+          return;
+        }
+      }
+
+      try {
+        const newSignupOpen = enabled
+          ? { enabled: true, start: new Date(start).toISOString(), end: new Date(end).toISOString() }
+          : { enabled: false };
+        await setDoc(doc(db, 'settings', 'main'), { ...settings, signupOpen: newSignupOpen }, { merge: true });
+        showToast('저장되었습니다', 'success');
+      } catch (err) {
+        showToast('오류: ' + err.message, 'error');
+      }
+    };
+
+    // ============== 수업 시간 관리 ==============
+    let unsubAdminMonth = null;
+    function loadAdminMonth() {
+      if (unsubAdminMonth) unsubAdminMonth();
+      const year = currentAdminDate.getFullYear();
+      const month = currentAdminDate.getMonth();
+      const mKey = monthKey(year, month);
+
+      document.getElementById('adminMonthTitle').textContent = `${year}년 ${String(month + 1).padStart(2, '0')}월`;
+
+      const daysRef = collection(db, 'months', mKey, 'days');
+      unsubAdminMonth = onSnapshot(daysRef, (snap) => {
+        adminMonthData = {};
+        snap.forEach(d => { adminMonthData[d.id] = d.data(); });
+        renderAdminCalendar();
+      });
+    }
+
+    function renderAdminCalendar() {
+      const year = currentAdminDate.getFullYear();
+      const month = currentAdminDate.getMonth();
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      const startDayOfWeek = firstDay.getDay();
+      const daysInMonth = lastDay.getDate();
+      const prevLastDay = new Date(year, month, 0).getDate();
+
+      const grid = document.getElementById('adminCalendarGrid');
+      grid.innerHTML = '';
+
+      let cells = [];
+      for (let i = startDayOfWeek - 1; i >= 0; i--) {
+        cells.push({ day: prevLastDay - i, otherMonth: true, dayOfWeek: (startDayOfWeek - 1 - i + 7) % 7 });
+      }
+      for (let day = 1; day <= daysInMonth; day++) {
+        cells.push({ day, otherMonth: false, dayOfWeek: new Date(year, month, day).getDay(), fullDate: dateKey(year, month, day) });
+      }
+      const totalCells = Math.ceil(cells.length / 7) * 7;
+      let nextDay = 1;
+      while (cells.length < totalCells) {
+        cells.push({ day: nextDay++, otherMonth: true, dayOfWeek: cells.length % 7 });
+      }
+
+      cells.forEach(cell => {
+        const cellDiv = document.createElement('div');
+        cellDiv.className = 'day-cell admin-cal-cell';
+        if (cell.otherMonth) cellDiv.classList.add('other-month');
+        if (cell.dayOfWeek === 0) cellDiv.classList.add('sunday');
+        if (cell.dayOfWeek === 6) cellDiv.classList.add('saturday');
+
+        const dayNum = document.createElement('div');
+        dayNum.className = 'day-num';
+        dayNum.textContent = cell.day;
+        cellDiv.appendChild(dayNum);
+
+        if (!cell.otherMonth && cell.fullDate) {
+          const dayData = adminMonthData[cell.fullDate] || {};
+
+          if (dayData.isHoliday) {
+            cellDiv.classList.add('holiday-cell');
+            const label = document.createElement('div');
+            label.style.color = '#c62828';
+            label.style.fontWeight = 'bold';
+            label.style.fontSize = '11px';
+            label.style.textAlign = 'center';
+            label.style.margin = '4px 0';
+            label.textContent = 'ALL OFF';
+            cellDiv.appendChild(label);
+
+            const holidayBtn = document.createElement('button');
+            holidayBtn.className = 'holiday-btn active';
+            holidayBtn.textContent = '휴일 해제';
+            holidayBtn.onclick = () => toggleHoliday(cell.fullDate, false);
+            cellDiv.appendChild(holidayBtn);
+          } else {
+            // 시간 슬롯들
+            if (dayData.slots && dayData.slots.length > 0) {
+              dayData.slots.forEach(slot => {
+                const entry = document.createElement('div');
+                entry.className = 'time-entry';
+                if (slot.bookedBy) {
+                  const c = nameToColor(slot.bookedBy);
+                  entry.style.background = c.bg;
+                  entry.style.color = c.fg;
+                  const text = document.createElement('span');
+                  text.textContent = `${formatTime(slot.time)} ${slot.bookedBy}`;
+                  entry.appendChild(text);
+                } else {
+                  entry.classList.add('empty');
+                  const text = document.createElement('span');
+                  text.textContent = formatTime(slot.time);
+                  entry.appendChild(text);
+                  const rm = document.createElement('button');
+                  rm.className = 'remove-btn';
+                  rm.textContent = '✕';
+                  rm.onclick = () => removeTime(cell.fullDate, slot.time);
+                  entry.appendChild(rm);
+                }
+                cellDiv.appendChild(entry);
+              });
+            }
+
+            const addBtn = document.createElement('button');
+            addBtn.className = 'add-time-btn';
+            addBtn.textContent = '+ 시간';
+            addBtn.onclick = () => promptAddTime(cell.fullDate);
+            cellDiv.appendChild(addBtn);
+
+            const holidayBtn = document.createElement('button');
+            holidayBtn.className = 'holiday-btn';
+            holidayBtn.textContent = '휴일로';
+            holidayBtn.onclick = () => toggleHoliday(cell.fullDate, true);
+            cellDiv.appendChild(holidayBtn);
+          }
+        }
+
+        grid.appendChild(cellDiv);
+      });
+    }
+
+    function promptAddTime(date) {
+      const input = prompt(`${date}에 추가할 시간 (HHMM 형식, 예: 1430):`);
+      if (!input) return;
+      const time = input.trim().padStart(4, '0');
+      if (!/^\d{4}$/.test(time)) {
+        showToast('HHMM 형식으로 입력하세요 (예: 1430)', 'error');
+        return;
+      }
+      addTime(date, time);
+    }
+
+    async function addTime(date, time) {
+      const mKey = date.substring(0, 7);
+      const dayRef = doc(db, 'months', mKey, 'days', date);
+      try {
+        await runTransaction(db, async (tx) => {
+          const snap = await tx.get(dayRef);
+          let data = snap.exists() ? snap.data() : { slots: [], isHoliday: false };
+          if (data.isHoliday) throw new Error('휴일은 시간을 추가할 수 없습니다');
+          if (!data.slots) data.slots = [];
+          if (data.slots.find(s => s.time === time)) throw new Error('이미 같은 시간이 있습니다');
+          data.slots.push({ time });
+          data.slots.sort((a, b) => a.time.localeCompare(b.time));
+          tx.set(dayRef, data);
+        });
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    async function removeTime(date, time) {
+      const mKey = date.substring(0, 7);
+      const dayRef = doc(db, 'months', mKey, 'days', date);
+      try {
+        await runTransaction(db, async (tx) => {
+          const snap = await tx.get(dayRef);
+          if (!snap.exists()) return;
+          const data = snap.data();
+          const slot = (data.slots || []).find(s => s.time === time);
+          if (slot && slot.bookedBy) {
+            if (!confirm(`이 시간에 ${slot.bookedBy}님이 신청되어 있습니다. 그래도 삭제하시겠습니까?`)) {
+              throw new Error('취소되었습니다');
+            }
+          }
+          data.slots = (data.slots || []).filter(s => s.time !== time);
+          tx.set(dayRef, data);
+        });
+      } catch (err) {
+        if (err.message !== '취소되었습니다') showToast(err.message, 'error');
+      }
+    }
+
+    async function toggleHoliday(date, isHoliday) {
+      const mKey = date.substring(0, 7);
+      const dayRef = doc(db, 'months', mKey, 'days', date);
+
+      if (isHoliday) {
+        // 휴일 지정 - 기존 신청자가 있으면 경고
+        const existing = adminMonthData[date];
+        if (existing && existing.slots) {
+          const booked = existing.slots.filter(s => s.bookedBy);
+          if (booked.length > 0) {
+            const names = booked.map(s => `${formatTime(s.time)} ${s.bookedBy}`).join('\n');
+            if (!confirm(`${date}에 다음 신청이 있습니다:\n\n${names}\n\n휴일로 변경하면 모두 삭제됩니다. 진행하시겠습니까?`)) {
+              return;
+            }
+          }
+        }
+        const label = prompt('휴일 이름 (예: 정기휴일, 공휴일 등):', '정기휴일');
+        if (label === null) return;
+
+        try {
+          await setDoc(dayRef, { isHoliday: true, holidayLabel: label, slots: [] });
+          showToast('휴일로 지정되었습니다', 'success');
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
+      } else {
+        try {
+          await setDoc(dayRef, { isHoliday: false, slots: [] });
+          showToast('휴일이 해제되었습니다', 'success');
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
+      }
+    }
+
+    document.getElementById('adminPrevMonth').onclick = () => {
+      currentAdminDate.setMonth(currentAdminDate.getMonth() - 1);
+      loadAdminMonth();
+    };
+    document.getElementById('adminNextMonth').onclick = () => {
+      currentAdminDate.setMonth(currentAdminDate.getMonth() + 1);
+      loadAdminMonth();
+    };
+
+    // ============== 일괄 추가 ==============
+    document.getElementById('bulkAddBtn').onclick = async () => {
+      const checked = Array.from(document.querySelectorAll('.weekday-check:checked')).map(c => parseInt(c.value));
+      const timesStr = document.getElementById('bulkTimes').value.trim();
+      if (checked.length === 0) { showToast('요일을 하나 이상 선택하세요', 'error'); return; }
+      if (!timesStr) { showToast('시간을 입력하세요', 'error'); return; }
+
+      const times = timesStr.split(',').map(t => t.trim().padStart(4, '0'));
+      for (const t of times) {
+        if (!/^\d{4}$/.test(t)) {
+          showToast(`잘못된 시간: ${t}`, 'error'); return;
+        }
+      }
+
+      const year = currentAdminDate.getFullYear();
+      const month = currentAdminDate.getMonth();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      let count = 0;
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dow = new Date(year, month, d).getDay();
+        if (!checked.includes(dow)) continue;
+        const date = dateKey(year, month, d);
+        for (const t of times) {
+          try {
+            await addTime(date, t);
+            count++;
+          } catch (err) { /* skip */ }
+        }
+      }
+      showToast(`${count}건 추가됨`, 'success');
+      document.getElementById('bulkTimes').value = '';
+      document.querySelectorAll('.weekday-check').forEach(c => c.checked = false);
+    };
+
+    document.getElementById('bulkClearBtn').onclick = async () => {
+      if (!confirm(`${currentAdminDate.getFullYear()}년 ${currentAdminDate.getMonth() + 1}월의 모든 수업 시간을 삭제하시겠습니까?\n\n(신청자가 있는 시간도 모두 삭제됩니다)`)) return;
+      if (!confirm('정말 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
+
+      const year = currentAdminDate.getFullYear();
+      const month = currentAdminDate.getMonth();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      let count = 0;
+      for (let d = 1; d <= daysInMonth; d++) {
+        const date = dateKey(year, month, d);
+        const data = adminMonthData[date];
+        if (data && !data.isHoliday && data.slots && data.slots.length > 0) {
+          await setDoc(doc(db, 'months', monthKey(year, month), 'days', date), { isHoliday: false, slots: [] });
+          count++;
+        }
+      }
+      showToast(`${count}일 초기화됨`, 'success');
+    };
+
+    // ============== 신청 현황 ==============
+    let unsubBookings = null;
+    function loadBookings() {
+      if (unsubBookings) unsubBookings();
+      const year = currentBookingsDate.getFullYear();
+      const month = currentBookingsDate.getMonth();
+      const mKey = monthKey(year, month);
+
+      document.getElementById('bookingsMonthTitle').textContent = `${year}년 ${String(month + 1).padStart(2, '0')}월`;
+
+      const daysRef = collection(db, 'months', mKey, 'days');
+      unsubBookings = onSnapshot(daysRef, (snap) => {
+        bookingsMonthData = {};
+        snap.forEach(d => { bookingsMonthData[d.id] = d.data(); });
+        renderBookings();
+      });
+    }
+
+    function renderBookings() {
+      // 통계
+      let totalSlots = 0, bookedSlots = 0, holidays = 0;
+      const studentCount = {};
+
+      Object.entries(bookingsMonthData).forEach(([date, data]) => {
+        if (data.isHoliday) { holidays++; return; }
+        if (data.slots) {
+          totalSlots += data.slots.length;
+          data.slots.forEach(s => {
+            if (s.bookedBy) {
+              bookedSlots++;
+              studentCount[s.bookedBy] = (studentCount[s.bookedBy] || 0) + 1;
+            }
+          });
+        }
+      });
+
+      document.getElementById('bookingStats').innerHTML = `
+        <div class="stat-box"><div class="label">총 수업</div><div class="value">${totalSlots}</div></div>
+        <div class="stat-box"><div class="label">신청 완료</div><div class="value">${bookedSlots}</div></div>
+        <div class="stat-box"><div class="label">빈 자리</div><div class="value">${totalSlots - bookedSlots}</div></div>
+        <div class="stat-box"><div class="label">휴일</div><div class="value">${holidays}</div></div>
+        <div class="stat-box"><div class="label">수강생 수</div><div class="value">${Object.keys(studentCount).length}</div></div>
+      `;
+
+      // 신청 목록
+      const list = [];
+      Object.entries(bookingsMonthData).forEach(([date, data]) => {
+        if (data.isHoliday || !data.slots) return;
+        data.slots.forEach(s => {
+          if (s.bookedBy) list.push({ date, time: s.time, name: s.bookedBy });
+        });
+      });
+      list.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+
+      const listEl = document.getElementById('bookingsList');
+      if (list.length === 0) {
+        listEl.innerHTML = '<p style="color:#999; padding:20px; text-align:center;">신청 내역이 없습니다.</p>';
+        return;
+      }
+
+      // 수강생별 그룹화
+      const byStudent = {};
+      list.forEach(b => {
+        if (!byStudent[b.name]) byStudent[b.name] = [];
+        byStudent[b.name].push(b);
+      });
+
+      let html = '';
+      Object.entries(byStudent).sort().forEach(([name, bookings]) => {
+        const c = nameToColor(name);
+        html += `<div style="margin-bottom:15px;">
+          <div style="background:${c.bg}; color:${c.fg}; padding:8px 12px; border-radius:6px; font-weight:bold; border-left:4px solid ${c.border};">
+            ${name} (${bookings.length}회)
+          </div>
+          <div style="padding:8px 0 0 12px;">`;
+        bookings.forEach(b => {
+          html += `<div style="padding:4px 0; font-size:14px;">📅 ${b.date} ${formatTime(b.time)}
+            <button class="btn btn-danger" style="margin-left:10px; padding:2px 8px; font-size:11px;" onclick="window.adminDelBooking('${b.date}','${b.time}','${b.name}')">삭제</button>
+          </div>`;
+        });
+        html += `</div></div>`;
+      });
+      listEl.innerHTML = html;
+    }
+
+    // 관리자가 강제 삭제
+    window.adminDelBooking = async (date, time, name) => {
+      if (!confirm(`${date} ${formatTime(time)} ${name}님의 신청을 삭제하시겠습니까?`)) return;
+      const mKey = date.substring(0, 7);
+      const dayRef = doc(db, 'months', mKey, 'days', date);
+      try {
+        await runTransaction(db, async (tx) => {
+          const snap = await tx.get(dayRef);
+          if (!snap.exists()) return;
+          const data = snap.data();
+          const idx = (data.slots || []).findIndex(s => s.time === time);
+          if (idx >= 0) {
+            data.slots[idx] = { time: data.slots[idx].time };
+            tx.update(dayRef, { slots: data.slots });
+          }
+        });
+        showToast('삭제됨', 'success');
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    };
+
+    document.getElementById('bookingsPrevMonth').onclick = () => {
+      currentBookingsDate.setMonth(currentBookingsDate.getMonth() - 1);
+      loadBookings();
+    };
+    document.getElementById('bookingsNextMonth').onclick = () => {
+      currentBookingsDate.setMonth(currentBookingsDate.getMonth() + 1);
+      loadBookings();
+    };
+
+    // ============== 캘린더 내보내기 ==============
+    function initExportPanel() {
+      const now = new Date();
+      const mInput = document.getElementById('exportMonth');
+      if (!mInput.value) {
+        mInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      }
+      updateExportInfo();
+      mInput.onchange = updateExportInfo;
+    }
+
+    async function updateExportInfo() {
+      const mInput = document.getElementById('exportMonth').value;
+      if (!mInput) return;
+      const infoEl = document.getElementById('exportInfo');
+      infoEl.innerHTML = '<div class="loading">로딩 중...</div>';
+
+      const daysRef = collection(db, 'months', mInput, 'days');
+      const snap = await getDocs(daysRef);
+      let count = 0;
+      snap.forEach(d => {
+        const data = d.data();
+        if (data.slots) {
+          data.slots.forEach(s => { if (s.bookedBy) count++; });
+        }
+      });
+      infoEl.innerHTML = `📊 <strong>${mInput}</strong>의 수강 신청: <strong>${count}건</strong>`;
+    }
+
+    document.getElementById('exportBtn').onclick = async () => {
+      const mInput = document.getElementById('exportMonth').value;
+      if (!mInput) {
+        showToast('월을 선택하세요', 'error');
+        return;
+      }
+
+      const daysRef = collection(db, 'months', mInput, 'days');
+      const snap = await getDocs(daysRef);
+      const events = [];
+
+      snap.forEach(d => {
+        const date = d.id;
+        const data = d.data();
+        if (data.isHoliday || !data.slots) return;
+        data.slots.forEach(s => {
+          if (s.bookedBy) {
+            events.push({
+              date, time: s.time, name: s.bookedBy
+            });
+          }
+        });
+      });
+
+      if (events.length === 0) {
+        showToast('내보낼 신청이 없습니다', 'error');
+        return;
+      }
+
+      const ics = generateICS(events);
+      downloadFile(`거인영어_${mInput}.ics`, ics);
+      showToast(`✅ ${events.length}건 내보내기 완료`, 'success');
+    };
+
+    function generateICS(events) {
+      const now = new Date();
+      const dtstamp = now.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+
+      const lines = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//거인영어//수강신청//KO',
+        'CALSCALE:GREGORIAN',
+        'METHOD:PUBLISH',
+        'X-WR-CALNAME:거인영어 수강신청',
+        'X-WR-TIMEZONE:Asia/Seoul'
+      ];
+
+      events.forEach((ev, idx) => {
+        const dateStr = ev.date.replace(/-/g, '');
+        const timeStr = ev.time.padStart(4, '0');
+        const endTime = addMinutes(timeStr, 90);
+
+        const dtstart = `${dateStr}T${timeStr}00`;
+        const dtend = `${dateStr}T${endTime}00`;
+
+        // 같은 시간 끝 24:00 처리
+        let actualDtend = dtend;
+        if (parseInt(endTime) < parseInt(timeStr)) {
+          // 다음날로 넘어감 (이론상 발생하지 않지만)
+          const nextDate = new Date(ev.date);
+          nextDate.setDate(nextDate.getDate() + 1);
+          const nextDateStr = `${nextDate.getFullYear()}${String(nextDate.getMonth() + 1).padStart(2, '0')}${String(nextDate.getDate()).padStart(2, '0')}`;
+          actualDtend = `${nextDateStr}T${endTime}00`;
+        }
+
+        lines.push('BEGIN:VEVENT');
+        lines.push(`UID:geoin-${ev.date}-${ev.time}-${idx}@geoin-english`);
+        lines.push(`DTSTAMP:${dtstamp}`);
+        lines.push(`DTSTART;TZID=Asia/Seoul:${dtstart}`);
+        lines.push(`DTEND;TZID=Asia/Seoul:${actualDtend}`);
+        lines.push(`SUMMARY:${ev.name} 자율수강`);
+        lines.push(`DESCRIPTION:거인영어 수강신청 - ${ev.name}`);
+        lines.push('END:VEVENT');
+      });
+
+      lines.push('END:VCALENDAR');
+      return lines.join('\r\n');
+    }
+
+    function downloadFile(filename, content) {
+      const blob = new Blob([content], { type: 'text/calendar;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // 초기 실행
+    checkLogin();
+
+    // 매분 신청 오픈 상태 업데이트
+    setInterval(() => {
+      if (sessionStorage.getItem(SESSION_KEY) === 'authenticated' && settings.signupOpen) {
+        updateSettingsUI();
+      }
+    }, 60000);
+  </script>
+</body>
+</html>
