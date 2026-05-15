@@ -116,6 +116,7 @@
     let settings = { editMode: false, signupOpen: null };
     let editModeData = { toCancel: [], toBook: [], studentName: null };
     let pendingSlot = null;
+    let lastWindowState = null; // 'waiting' | 'open' | 'closed' | null
 
     function showToast(message, type = '') {
       const toast = document.getElementById('toast');
@@ -148,6 +149,10 @@
       const w = settings.signupOpen;
       if (!w || !w.enabled) {
         box.style.display = 'none';
+        if (lastWindowState !== null) {
+          lastWindowState = null;
+          renderCalendar();
+        }
         return;
       }
 
@@ -157,6 +162,18 @@
       const now = getKSTNow();
       const start = new Date(w.start);
       const end = new Date(w.end);
+
+      // 현재 상태 판정
+      let currentState;
+      if (now < start) currentState = 'waiting';
+      else if (now > end) currentState = 'closed';
+      else currentState = 'open';
+
+      // 상태 변화 감지 시 즉시 달력 다시 그리기 (슬롯 활성/비활성 갱신)
+      if (lastWindowState !== null && lastWindowState !== currentState) {
+        renderCalendar();
+      }
+      lastWindowState = currentState;
 
       const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 
@@ -199,19 +216,12 @@
       return parts.join(' ') + ' 남음';
     }
 
-    // 매초 카운트다운 업데이트
+    // 매초 카운트다운 업데이트 (상태 변화 시 자동으로 슬롯도 갱신됨)
     setInterval(() => {
       if (settings.signupOpen && settings.signupOpen.enabled) {
         updateSignupWindowUI();
       }
     }, 1000);
-
-    // 매분 슬롯 상태도 다시 그리기 (마감 시 비활성화 처리)
-    setInterval(() => {
-      if (settings.signupOpen && settings.signupOpen.enabled) {
-        renderCalendar();
-      }
-    }, 60000);
 
     function updateModeUI() {
       const banner = document.getElementById('editModeBanner');
