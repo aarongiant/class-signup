@@ -15,6 +15,13 @@
       <div class="subtitle" id="modeIndicator">신청을 원하는 시간을 클릭하세요</div>
     </div>
 
+    <!-- 신청 오픈 시간 정보 박스 -->
+    <div class="signup-window-info" id="signupWindowInfo" style="display:none;">
+      <div class="window-status" id="windowStatus"></div>
+      <div class="window-times" id="windowTimes"></div>
+      <div class="window-countdown" id="windowCountdown"></div>
+    </div>
+
     <!-- 정정 모드 배너 -->
     <div class="edit-mode-banner" id="editModeBanner" style="display:none;">
       <h3>⚠️ 수강정정 모드</h3>
@@ -126,9 +133,85 @@
           settings = { editMode: false, signupOpen: null };
         }
         updateModeUI();
+        updateSignupWindowUI();
         renderCalendar();
       });
     }
+
+    // 신청 오픈 시간 박스 업데이트
+    function updateSignupWindowUI() {
+      const box = document.getElementById('signupWindowInfo');
+      const statusEl = document.getElementById('windowStatus');
+      const timesEl = document.getElementById('windowTimes');
+      const countdownEl = document.getElementById('windowCountdown');
+
+      const w = settings.signupOpen;
+      if (!w || !w.enabled) {
+        box.style.display = 'none';
+        return;
+      }
+
+      box.style.display = 'block';
+      box.classList.remove('status-waiting', 'status-open', 'status-closed');
+
+      const now = getKSTNow();
+      const start = new Date(w.start);
+      const end = new Date(w.end);
+
+      const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+
+      timesEl.innerHTML = `
+        <div><span class="label">🟢 수강신청 오픈</span> ${fmt(start)}</div>
+        <div><span class="label">🔒 수강신청 종료</span> ${fmt(end)}</div>
+      `;
+
+      if (now < start) {
+        box.classList.add('status-waiting');
+        statusEl.textContent = '⏳ 신청 오픈 대기 중';
+        countdownEl.textContent = `오픈까지 ${formatRemainTime(start - now)}`;
+      } else if (now > end) {
+        box.classList.add('status-closed');
+        statusEl.textContent = '🔒 수강신청이 마감되었습니다';
+        countdownEl.textContent = '';
+        countdownEl.style.display = 'none';
+        return;
+      } else {
+        box.classList.add('status-open');
+        statusEl.textContent = '🟢 수강신청 진행 중';
+        countdownEl.textContent = `종료까지 ${formatRemainTime(end - now)}`;
+      }
+      countdownEl.style.display = 'inline-block';
+    }
+
+    // ms를 "N일 N시간 N분 N초 남음" 형식으로
+    function formatRemainTime(ms) {
+      if (ms <= 0) return '0초';
+      const sec = Math.floor(ms / 1000);
+      const days = Math.floor(sec / 86400);
+      const hours = Math.floor((sec % 86400) / 3600);
+      const mins = Math.floor((sec % 3600) / 60);
+      const secs = sec % 60;
+      const parts = [];
+      if (days > 0) parts.push(`${days}일`);
+      if (hours > 0) parts.push(`${hours}시간`);
+      if (mins > 0) parts.push(`${mins}분`);
+      parts.push(`${secs}초`);
+      return parts.join(' ') + ' 남음';
+    }
+
+    // 매초 카운트다운 업데이트
+    setInterval(() => {
+      if (settings.signupOpen && settings.signupOpen.enabled) {
+        updateSignupWindowUI();
+      }
+    }, 1000);
+
+    // 매분 슬롯 상태도 다시 그리기 (마감 시 비활성화 처리)
+    setInterval(() => {
+      if (settings.signupOpen && settings.signupOpen.enabled) {
+        renderCalendar();
+      }
+    }, 60000);
 
     function updateModeUI() {
       const banner = document.getElementById('editModeBanner');

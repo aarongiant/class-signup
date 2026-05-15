@@ -523,6 +523,65 @@ body {
   font-weight: bold;
 }
 
+/* 신청 오픈 시간 정보 박스 */
+.signup-window-info {
+  background: white;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  text-align: center;
+  border-left: 5px solid #1a4d8f;
+}
+
+.signup-window-info.status-waiting { border-left-color: #f57c00; background: #fff8e1; }
+.signup-window-info.status-open { border-left-color: #2e7d32; background: #e8f5e9; }
+.signup-window-info.status-closed { border-left-color: #c62828; background: #ffebee; }
+
+.window-status {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.signup-window-info.status-waiting .window-status { color: #f57c00; }
+.signup-window-info.status-open .window-status { color: #2e7d32; }
+.signup-window-info.status-closed .window-status { color: #c62828; }
+
+.window-times {
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 8px;
+  line-height: 1.6;
+}
+
+.window-times .label {
+  font-weight: bold;
+  color: #333;
+  display: inline-block;
+  min-width: 90px;
+  text-align: right;
+  margin-right: 8px;
+}
+
+.window-countdown {
+  font-size: 20px;
+  font-weight: bold;
+  color: #1a4d8f;
+  padding: 8px;
+  background: rgba(255,255,255,0.7);
+  border-radius: 4px;
+  display: inline-block;
+  min-width: 280px;
+}
+
+@media (max-width: 768px) {
+  .window-status { font-size: 16px; }
+  .window-times { font-size: 13px; }
+  .window-times .label { min-width: 70px; }
+  .window-countdown { font-size: 17px; min-width: auto; width: 100%; }
+}
+
 /* 모바일 최적화 */
 @media (max-width: 768px) {
   .container {
