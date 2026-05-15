@@ -5,8 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
   <meta name="googlebot" content="noindex, nofollow">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>거인영어 수강신청</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20260516a">
   <style>
     .login-box {
       max-width: 420px;
@@ -222,8 +225,8 @@
   <div class="toast" id="toast"></div>
 
   <script type="module">
-    import { db } from './firebase-config.js';
-    import { nameToColor, getKSTNow, dateKey, monthKey, formatTime } from './utils.js';
+    import { db } from './firebase-config.js?v=20260516a';
+    import { nameToColor, getKSTNow, dateKey, monthKey, formatTime } from './utils.js?v=20260516a';
     import {
       collection, doc, getDoc, getDocs, setDoc, deleteDoc, updateDoc,
       onSnapshot, runTransaction
