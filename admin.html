@@ -621,15 +621,18 @@
       return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
     }
 
-    // 시작/종료 시각 입력란을 "지금 ~ 5분 후"로 자동 채움 (비어있을 때만)
-    function autoFillTimeInputs(startEl, endEl) {
+    // 시작/종료 시각 입력란을 "지금 ~ 5분 후"로 자동 채움
+    // forceOverwrite: true면 기존 값이 있어도 덮어씀
+    function autoFillTimeInputs(startEl, endEl, forceOverwrite = false) {
       const now = new Date();
       const fivelater = new Date(now.getTime() + 5 * 60 * 1000);
-      if (!startEl.value) {
+      if (forceOverwrite || !startEl.value) {
         startEl.value = toDatetimeLocalString(now);
+        startEl.dataset.userTouched = 'true'; // 자동입력도 사용자 입력처럼 보호
       }
-      if (!endEl.value) {
+      if (forceOverwrite || !endEl.value) {
         endEl.value = toDatetimeLocalString(fivelater);
+        endEl.dataset.userTouched = 'true';
       }
     }
 
@@ -638,11 +641,12 @@
       e.target.dataset.userTouched = 'true';
       const details = document.getElementById('editScheduleDetails');
       details.style.display = e.target.checked ? 'block' : 'none';
-      // ON으로 켜는 순간, 시간 입력란이 비어있으면 자동으로 채워줌
+      // ON으로 켜는 순간, 시간을 "지금~5분 후"로 자동 채움 (기존 값 덮어쓰기)
       if (e.target.checked) {
         autoFillTimeInputs(
           document.getElementById('editScheduleStart'),
-          document.getElementById('editScheduleEnd')
+          document.getElementById('editScheduleEnd'),
+          true
         );
       }
     };
@@ -710,11 +714,12 @@
       e.target.dataset.userTouched = 'true';
       const details = document.getElementById('windowDetails');
       details.style.display = e.target.checked ? 'block' : 'none';
-      // ON으로 켜는 순간, 시간 입력란이 비어있으면 자동으로 채워줌
+      // ON으로 켜는 순간, 시간을 "지금~5분 후"로 자동 채움 (기존 값 덮어쓰기)
       if (e.target.checked) {
         autoFillTimeInputs(
           document.getElementById('windowStart'),
-          document.getElementById('windowEnd')
+          document.getElementById('windowEnd'),
+          true
         );
       }
     };
