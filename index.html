@@ -885,7 +885,7 @@
       }
     };
 
-    async function bookSlot(date, time, name) {
+    async function bookSlot(date, time, name, isEditMode = false) {
       const mKey = date.substring(0, 7);
       const dayRef = doc(db, 'months', mKey, 'days', date);
 
@@ -896,8 +896,10 @@
         const data = daySnap.data();
         if (data.isHoliday) throw new Error('휴일에는 신청할 수 없습니다');
 
-        // 신청 오픈 시간 재확인 (서버에서 한번 더)
-        if (!isSignupOpen()) throw new Error('신청 가능 시간이 아닙니다');
+        // 일반 신청일 때만 신청 시간 체크 (정정 모드에선 정정 시간 따름)
+        if (!isEditMode && !isSignupOpen()) {
+          throw new Error('신청 가능 시간이 아닙니다');
+        }
 
         const slots = data.slots || [];
         const slotIdx = slots.findIndex(s => s.time === time);
@@ -964,7 +966,7 @@
           await cancelSlot(item.date, item.time, editModeData.studentName);
         }
         for (const item of editModeData.toBook) {
-          await bookSlot(item.date, item.time, item.name);
+          await bookSlot(item.date, item.time, item.name, true); // 정정 모드 플래그
         }
         editModeData.toCancel = [];
         editModeData.toBook = [];
