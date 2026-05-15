@@ -27,6 +27,7 @@
       <h3>⚠️ 수강정정 모드</h3>
       <p>본인이 신청한 수업을 클릭해서 취소하고, 빈 시간을 클릭해서 다시 신청하세요.<br>
          <strong>취소 횟수 = 신청 횟수</strong>가 같아야 변경할 수 있습니다.</p>
+      <div id="editScheduleCountdown" style="margin-top: 8px; font-weight: bold; color: #856404;"></div>
       <div class="edit-mode-status">
         <div>취소: <span class="count" id="cancelCount">0</span>건</div>
         <div>신청: <span class="count" id="newCount">0</span>건</div>
@@ -218,16 +219,67 @@
 
     // 매초 카운트다운 업데이트 (상태 변화 시 자동으로 슬롯도 갱신됨)
     setInterval(() => {
+      // 신청 오픈 시간
       if (settings.signupOpen && settings.signupOpen.enabled) {
         updateSignupWindowUI();
       }
+      // 정정 모드 일정 - 상태 변화 시 자동 반영
+      checkEditModeChange();
     }, 1000);
+
+    // 현재 정정 모드가 실제로 활성화되어야 하는지 판정
+    function isEditModeEffective() {
+      if (settings.editMode) return true;
+      const sched = settings.editSchedule;
+      if (sched && sched.enabled && sched.start && sched.end) {
+        const now = getKSTNow();
+        return now >= new Date(sched.start) && now <= new Date(sched.end);
+      }
+      return false;
+    }
+
+    let lastEditModeState = null;
+    function checkEditModeChange() {
+      const current = isEditModeEffective();
+      if (lastEditModeState !== null && lastEditModeState !== current) {
+        // 정정 모드 상태가 변했음 - UI 새로고침
+        updateModeUI();
+        renderCalendar();
+      }
+      lastEditModeState = current;
+
+      // 정정 모드 일정 진행 중이면 정정 모드 박스 카운트다운 갱신
+      updateEditScheduleUI();
+    }
+
+    function updateEditScheduleUI() {
+      const banner = document.getElementById('editModeBanner');
+      const sched = settings.editSchedule;
+      const countdownEl = document.getElementById('editScheduleCountdown');
+      if (!countdownEl) return;
+
+      if (!isEditModeEffective()) {
+        countdownEl.textContent = '';
+        return;
+      }
+
+      if (sched && sched.enabled) {
+        const now = getKSTNow();
+        const end = new Date(sched.end);
+        if (now <= end) {
+          countdownEl.textContent = `⏰ 정정 종료까지 ${formatRemainTime(end - now)}`;
+        }
+      } else {
+        countdownEl.textContent = '';
+      }
+    }
 
     function updateModeUI() {
       const banner = document.getElementById('editModeBanner');
       const indicator = document.getElementById('modeIndicator');
+      const effective = isEditModeEffective();
 
-      if (settings.editMode) {
+      if (effective) {
         banner.style.display = 'block';
         indicator.textContent = '⚠️ 수강정정 모드입니다.';
         if (!editModeData.studentName) {
@@ -240,6 +292,7 @@
         editModeData = { toCancel: [], toBook: [], studentName: null };
       }
       updateEditModeStatus();
+      updateEditScheduleUI();
     }
 
     function askEditName() {
@@ -432,7 +485,7 @@
         el.textContent = `${timeDisplay} ${slot.bookedBy}`;
       }
 
-      if (settings.editMode) {
+      if (isEditModeEffective()) {
         if (isBooked) {
           // 본인 예약인 경우만 취소 가능
           if (slot.bookedBy === editModeData.studentName) {
@@ -630,7 +683,7 @@
     document.getElementById('prevMonth').onclick = () => {
       currentDate.setMonth(currentDate.getMonth() - 1);
       loadMonthData(currentDate.getFullYear(), currentDate.getMonth());
-      if (settings.editMode) {
+      if (isEditModeEffective()) {
         editModeData.toCancel = [];
         editModeData.toBook = [];
         updateEditModeStatus();
@@ -640,7 +693,7 @@
     document.getElementById('nextMonth').onclick = () => {
       currentDate.setMonth(currentDate.getMonth() + 1);
       loadMonthData(currentDate.getFullYear(), currentDate.getMonth());
-      if (settings.editMode) {
+      if (isEditModeEffective()) {
         editModeData.toCancel = [];
         editModeData.toBook = [];
         updateEditModeStatus();

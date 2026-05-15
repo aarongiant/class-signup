@@ -232,15 +232,46 @@
     <div class="admin-panel" id="panel-editmode">
       <h3 style="margin-bottom: 15px;">🔄 수강정정 모드</h3>
       <p style="margin-bottom: 20px; color: #666;">
-        정정 모드를 켜면 수강생이 본인의 신청을 취소하고 다른 시간으로 변경할 수 있습니다.<br>
+        정정 모드에서는 수강생이 본인의 신청을 취소하고 다른 시간으로 변경할 수 있습니다.<br>
         취소 횟수와 신청 횟수가 같아야만 변경이 확정됩니다.
       </p>
 
-      <div class="input-group" style="font-size: 18px;">
+      <!-- 즉시 ON/OFF -->
+      <div style="background: #f5f5f5; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+        <h4 style="margin-bottom: 10px; color: #1a4d8f;">⚡ 즉시 ON/OFF</h4>
+        <p style="font-size: 13px; color: #666; margin-bottom: 10px;">지금 바로 정정 모드를 켜거나 끕니다 (일정과 별개로 동작)</p>
         <div class="toggle-switch">
           <input type="checkbox" id="editModeToggle">
-          <label for="editModeToggle" style="cursor:pointer; font-size: 16px;">정정 모드 ON/OFF</label>
+          <label for="editModeToggle" style="cursor:pointer; font-size: 16px;">정정 모드 즉시 ON/OFF</label>
         </div>
+      </div>
+
+      <!-- 일정 예약 -->
+      <div style="background: #f5f5f5; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+        <h4 style="margin-bottom: 10px; color: #1a4d8f;">📅 일정 예약</h4>
+        <p style="font-size: 13px; color: #666; margin-bottom: 10px;">
+          설정한 시각에 자동으로 정정 모드가 시작되고, 종료 시각에 자동으로 꺼집니다. (한국시간 기준)
+        </p>
+
+        <div class="input-group">
+          <div class="toggle-switch">
+            <input type="checkbox" id="editScheduleEnabled">
+            <label for="editScheduleEnabled" style="cursor:pointer;">일정 예약 활성화</label>
+          </div>
+        </div>
+
+        <div id="editScheduleDetails">
+          <div class="input-group">
+            <label>정정 시작 시각</label>
+            <input type="datetime-local" id="editScheduleStart" style="padding: 8px; font-size: 15px;">
+          </div>
+          <div class="input-group">
+            <label>정정 종료 시각</label>
+            <input type="datetime-local" id="editScheduleEnd" style="padding: 8px; font-size: 15px;">
+          </div>
+        </div>
+
+        <button class="btn btn-primary" id="saveEditScheduleBtn" style="margin-top: 10px;">저장</button>
       </div>
 
       <div id="editModeStatus" style="margin-top: 20px; padding: 15px; border-radius: 6px;"></div>
@@ -389,19 +420,68 @@
       });
     }
 
+    // 현재 정정 모드가 실제로 활성화되어야 하는지 (수동 토글 또는 일정 예약)
+    function isEditModeEffective() {
+      if (settings.editMode) return true;
+      const sched = settings.editSchedule;
+      if (sched && sched.enabled && sched.start && sched.end) {
+        const now = getKSTNow();
+        return now >= new Date(sched.start) && now <= new Date(sched.end);
+      }
+      return false;
+    }
+
     function updateSettingsUI() {
-      // 정정 모드 토글
+      // 정정 모드 즉시 토글
       document.getElementById('editModeToggle').checked = settings.editMode || false;
+
+      // 정정 모드 일정 예약 표시
+      const sched = settings.editSchedule;
+      const schedCheck = document.getElementById('editScheduleEnabled');
+      const schedDetails = document.getElementById('editScheduleDetails');
+
+      if (sched && sched.enabled) {
+        schedCheck.checked = true;
+        schedDetails.style.display = 'block';
+        if (sched.start) document.getElementById('editScheduleStart').value = sched.start.substring(0, 16);
+        if (sched.end) document.getElementById('editScheduleEnd').value = sched.end.substring(0, 16);
+      } else {
+        schedCheck.checked = false;
+        schedDetails.style.display = 'none';
+      }
+
+      // 정정 모드 상태 박스
       const statusEl = document.getElementById('editModeStatus');
-      if (settings.editMode) {
+      const effective = isEditModeEffective();
+      const now = getKSTNow();
+      let statusHTML = '';
+
+      if (effective) {
         statusEl.style.background = '#fff3cd';
         statusEl.style.border = '2px solid #ffc107';
-        statusEl.innerHTML = '<strong style="color:#856404;">⚠️ 정정 모드가 활성화되어 있습니다.</strong><br>수강생은 본인 신청을 취소/변경할 수 있습니다.';
+        let reason = settings.editMode ? '즉시 ON으로 활성화됨' : '';
+        if (sched && sched.enabled && now >= new Date(sched.start) && now <= new Date(sched.end)) {
+          reason = reason ? reason + ' + 일정 예약 진행 중' : '일정 예약 진행 중';
+        }
+        statusHTML = `<strong style="color:#856404;">⚠️ 정정 모드 활성화 중</strong> <small>(${reason})</small><br>수강생은 본인 신청을 취소/변경할 수 있습니다.`;
+        if (sched && sched.enabled && now >= new Date(sched.start) && now <= new Date(sched.end)) {
+          statusHTML += `<br><small>📅 일정: ${new Date(sched.start).toLocaleString('ko-KR')} ~ ${new Date(sched.end).toLocaleString('ko-KR')}</small>`;
+          statusHTML += `<br><small>⏰ 종료까지: ${formatDuration(new Date(sched.end) - now)}</small>`;
+        }
       } else {
         statusEl.style.background = '#e8f5e9';
         statusEl.style.border = '2px solid #2e7d32';
-        statusEl.innerHTML = '<strong style="color:#2e7d32;">✅ 정정 모드가 비활성화되어 있습니다.</strong><br>수강생은 신규 신청만 할 수 있고 취소는 불가합니다.';
+        statusHTML = '<strong style="color:#2e7d32;">✅ 정정 모드 비활성화</strong><br>수강생은 신규 신청만 할 수 있고 취소는 불가합니다.';
+        if (sched && sched.enabled) {
+          if (now < new Date(sched.start)) {
+            statusHTML += `<br><small>📅 예약된 일정: ${new Date(sched.start).toLocaleString('ko-KR')} ~ ${new Date(sched.end).toLocaleString('ko-KR')}</small>`;
+            statusHTML += `<br><small>⏳ 시작까지: ${formatDuration(new Date(sched.start) - now)}</small>`;
+          } else if (now > new Date(sched.end)) {
+            statusHTML += `<br><small>📅 일정이 종료되었습니다 (${new Date(sched.end).toLocaleString('ko-KR')})</small>`;
+          }
+        }
       }
+      statusEl.innerHTML = statusHTML;
 
       // 신청 오픈 시간
       const window = settings.signupOpen;
@@ -462,6 +542,38 @@
       } catch (err) {
         showToast('오류: ' + err.message, 'error');
         e.target.checked = !isOn;
+      }
+    };
+
+    // ============== 정정 모드 일정 예약 ==============
+    document.getElementById('editScheduleEnabled').onchange = (e) => {
+      document.getElementById('editScheduleDetails').style.display = e.target.checked ? 'block' : 'none';
+    };
+
+    document.getElementById('saveEditScheduleBtn').onclick = async () => {
+      const enabled = document.getElementById('editScheduleEnabled').checked;
+      const start = document.getElementById('editScheduleStart').value;
+      const end = document.getElementById('editScheduleEnd').value;
+
+      if (enabled) {
+        if (!start || !end) {
+          showToast('시작/종료 시각을 모두 입력하세요', 'error');
+          return;
+        }
+        if (new Date(start) >= new Date(end)) {
+          showToast('종료 시각은 시작보다 늦어야 합니다', 'error');
+          return;
+        }
+      }
+
+      try {
+        const newEditSchedule = enabled
+          ? { enabled: true, start: new Date(start).toISOString(), end: new Date(end).toISOString() }
+          : { enabled: false };
+        await setDoc(doc(db, 'settings', 'main'), { ...settings, editSchedule: newEditSchedule }, { merge: true });
+        showToast('저장되었습니다', 'success');
+      } catch (err) {
+        showToast('오류: ' + err.message, 'error');
       }
     };
 
@@ -1011,12 +1123,13 @@
     // 초기 실행
     checkLogin();
 
-    // 매분 신청 오픈 상태 업데이트
+    // 상태 업데이트 (정정 모드 일정 진행 중일 땐 매초, 평소엔 매분)
     setInterval(() => {
-      if (sessionStorage.getItem(SESSION_KEY) === 'authenticated' && settings.signupOpen) {
+      if (sessionStorage.getItem(SESSION_KEY) !== 'authenticated') return;
+      if (settings.signupOpen || settings.editSchedule) {
         updateSettingsUI();
       }
-    }, 60000);
+    }, 1000);
   </script>
 </body>
 </html>
