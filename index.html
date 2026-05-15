@@ -471,11 +471,18 @@
       const timesEl = document.getElementById('windowTimes');
       const countdownEl = document.getElementById('windowCountdown');
 
-      // 즉시 ON이면 시간 제한 박스 숨김 (제한 없이 항상 가능)
-      if (settings.signupAlways) {
-        box.style.display = 'none';
-        if (lastWindowState !== null) {
-          lastWindowState = null;
+      // 즉시 차단이 켜져 있으면 빨간 차단 안내 표시
+      if (settings.signupBlocked) {
+        box.style.display = 'block';
+        box.classList.remove('status-waiting', 'status-open');
+        box.classList.add('status-closed');
+        statusEl.textContent = '🚫 수강신청이 일시 차단되었습니다';
+        timesEl.innerHTML = '<div style="color:#666; font-size:14px;">관리자가 신청을 일시적으로 막아두었습니다.<br>잠시 후 다시 시도해주세요.</div>';
+        countdownEl.textContent = '';
+        countdownEl.style.display = 'none';
+        // 상태 변화 감지 - 차단이 새로 켜지면 슬롯 다시 그리기
+        if (lastWindowState !== 'blocked') {
+          lastWindowState = 'blocked';
           renderCalendar();
         }
         return;
@@ -553,8 +560,8 @@
 
     // 매초 카운트다운 업데이트 (상태 변화 시 자동으로 슬롯도 갱신됨)
     setInterval(() => {
-      // 신청 오픈 시간
-      if (settings.signupOpen && settings.signupOpen.enabled) {
+      // 신청 오픈 시간 (차단 또는 일정 진행 중일 때 갱신)
+      if (settings.signupBlocked || (settings.signupOpen && settings.signupOpen.enabled)) {
         updateSignupWindowUI();
       }
       // 정정 모드 일정 - 상태 변화 시 자동 반영
@@ -638,9 +645,9 @@
     }
 
     function isSignupOpen() {
-      // 즉시 ON이면 무조건 가능
-      if (settings.signupAlways) return true;
-      // 일정 예약이 꺼져있으면 항상 가능 (둘 다 비활성 = 무제한)
+      // 즉시 차단이 켜져 있으면 무조건 신청 불가
+      if (settings.signupBlocked) return false;
+      // 일정 예약이 꺼져있으면 항상 가능
       if (!settings.signupOpen || !settings.signupOpen.enabled) return true;
       // 일정 예약 범위 내인지 체크
       const now = getKSTNow();
