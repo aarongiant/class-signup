@@ -148,6 +148,7 @@
       <button class="admin-tab" data-tab="window">🔓 신청 오픈 시간</button>
       <button class="admin-tab" data-tab="editmode">🔄 정정 모드</button>
       <button class="admin-tab" data-tab="bookings">📊 신청 현황</button>
+      <button class="admin-tab" data-tab="students">👥 수강생 관리</button>
       <button class="admin-tab" data-tab="export">📤 캘린더 내보내기</button>
     </div>
 
@@ -291,6 +292,18 @@
       <div id="bookingsList"></div>
     </div>
 
+    <!-- 수강생 관리 -->
+    <div class="admin-panel" id="panel-students">
+      <h3 style="margin-bottom: 15px;">👥 수강생 관리</h3>
+      <p style="margin-bottom: 20px; color: #666;">
+        등록된 수강생 목록입니다. 비밀번호를 잊은 수강생은 <strong>0000으로 초기화</strong>해주세요.
+      </p>
+
+      <div class="stats-row" id="studentStats"></div>
+
+      <div id="studentsList" style="margin-top: 15px;"></div>
+    </div>
+
     <!-- 구글 캘린더 내보내기 -->
     <div class="admin-panel" id="panel-export">
       <h3 style="margin-bottom: 15px;">📤 구글 캘린더로 내보내기</h3>
@@ -398,6 +411,7 @@
         document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
 
         if (tab.dataset.tab === 'bookings') loadBookings();
+        if (tab.dataset.tab === 'students') loadStudents();
         if (tab.dataset.tab === 'export') initExportPanel();
       };
     });
@@ -1083,6 +1097,81 @@
     };
 
     // ============== 캘린더 내보내기 ==============
+    // ============== 수강생 관리 ==============
+    let unsubStudents = null;
+    function loadStudents() {
+      if (unsubStudents) unsubStudents();
+      const studentsRef = collection(db, 'students');
+      unsubStudents = onSnapshot(studentsRef, (snap) => {
+        const students = [];
+        snap.forEach(d => students.push(d.data()));
+        renderStudents(students);
+      });
+    }
+
+    function renderStudents(students) {
+      // 통계
+      document.getElementById('studentStats').innerHTML = `
+        <div class="stat-box"><div class="label">등록된 수강생</div><div class="value">${students.length}</div></div>
+      `;
+
+      const listEl = document.getElementById('studentsList');
+      if (students.length === 0) {
+        listEl.innerHTML = '<p style="color:#999; padding:20px; text-align:center;">아직 등록된 수강생이 없습니다.</p>';
+        return;
+      }
+
+      // 이름 가나다순 정렬
+      students.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+
+      let html = `<table class="signup-list" style="width:100%;">
+        <thead>
+          <tr>
+            <th style="width:40%;">이름</th>
+            <th style="width:30%;">가입일</th>
+            <th style="width:30%;">작업</th>
+          </tr>
+        </thead>
+        <tbody>`;
+      students.forEach(s => {
+        const created = s.createdAt ? new Date(s.createdAt).toLocaleDateString('ko-KR') : '-';
+        html += `<tr>
+          <td><strong>${s.name}</strong></td>
+          <td style="font-size:13px; color:#666;">${created}</td>
+          <td>
+            <button class="btn btn-primary" style="padding:4px 10px; font-size:12px; margin-right:4px;"
+              onclick="window.adminResetPw('${s.name.replace(/'/g, "\\'")}')">비밀번호 초기화</button>
+            <button class="delete-btn"
+              onclick="window.adminDeleteStudent('${s.name.replace(/'/g, "\\'")}')">삭제</button>
+          </td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      listEl.innerHTML = html;
+    }
+
+    // 비밀번호 초기화
+    window.adminResetPw = async (name) => {
+      if (!confirm(`${name}님의 비밀번호를 0000으로 초기화하시겠습니까?\n\n수강생에게 알려주세요.`)) return;
+      try {
+        await updateDoc(doc(db, 'students', name), { password: '0000' });
+        showToast(`✅ ${name}님 비밀번호 → 0000`, 'success');
+      } catch (err) {
+        showToast('오류: ' + err.message, 'error');
+      }
+    };
+
+    // 수강생 삭제
+    window.adminDeleteStudent = async (name) => {
+      if (!confirm(`${name}님을 삭제하시겠습니까?\n\n※ 본인 정보만 삭제되며, 이미 신청한 수업은 그대로 남습니다.\n※ 수강생이 같은 이름으로 다시 가입 가능합니다.`)) return;
+      try {
+        await deleteDoc(doc(db, 'students', name));
+        showToast(`${name}님 삭제됨`, 'success');
+      } catch (err) {
+        showToast('오류: ' + err.message, 'error');
+      }
+    };
+
     function initExportPanel() {
       const now = new Date();
       const mInput = document.getElementById('exportMonth');
