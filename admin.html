@@ -200,30 +200,29 @@
 
     <!-- 신청 오픈 시간 -->
     <div class="admin-panel" id="panel-window">
-      <h3 style="margin-bottom: 15px;">🔓 수강신청 오픈 시간 설정</h3>
+      <h3 style="margin-bottom: 15px;">🔓 수강신청 설정</h3>
       <p style="margin-bottom: 20px; color: #666;">
-        설정한 시간에만 수강생이 신청할 수 있습니다. (한국시간 기준)<br>
-        ※ <strong>즉시 차단</strong>이 켜져 있으면 일정과 무관하게 신청이 막힙니다.
+        <strong>메인 토글이 ON</strong>이어야 수강신청을 받을 수 있습니다. (한국시간 기준)<br>
+        ※ OFF 시 즉시 차단되며, 일정 예약도 작동하지 않습니다.
       </p>
 
-      <!-- 즉시 차단 -->
-      <div style="background: #fff3cd; padding: 15px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #c62828;">
-        <h4 style="margin-bottom: 10px; color: #c62828;">🚫 즉시 차단 (비상 정지)</h4>
+      <!-- 메인 ON/OFF 토글 -->
+      <div style="background: #e8f5e9; padding: 18px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #2e7d32;">
+        <h4 style="margin-bottom: 10px; color: #2e7d32;">🔘 수강신청 ON/OFF</h4>
         <p style="font-size: 13px; color: #666; margin-bottom: 10px;">
-          켜면 <strong>일정이나 다른 설정과 무관하게</strong> 수강신청이 즉시 막힙니다.<br>
-          긴급 상황이나 점검 시 사용하세요.
+          신청 자체를 켜고 끄는 메인 스위치입니다. <strong>OFF</strong>로 두면 일정과 무관하게 즉시 차단됩니다.
         </p>
         <div class="toggle-switch">
-          <input type="checkbox" id="signupBlockToggle">
-          <label for="signupBlockToggle" style="cursor:pointer; font-size: 16px; font-weight: bold; color: #c62828;">신청 즉시 차단</label>
+          <input type="checkbox" id="signupMainToggle">
+          <label for="signupMainToggle" style="cursor:pointer; font-size: 17px; font-weight: bold; color: #2e7d32;">수강신청 받기</label>
         </div>
       </div>
 
       <!-- 일정 예약 -->
       <div style="background: #f5f5f5; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
-        <h4 style="margin-bottom: 10px; color: #1a4d8f;">📅 일정 예약</h4>
+        <h4 style="margin-bottom: 10px; color: #1a4d8f;">📅 일정 예약 <small style="color:#999; font-weight:normal;">(메인 ON일 때만 작동)</small></h4>
         <p style="font-size: 13px; color: #666; margin-bottom: 10px;">
-          설정한 시각에 자동으로 신청이 열리고 종료 시각에 자동으로 닫힙니다. (한국시간 기준)
+          설정한 시각에만 신청 가능. 비활성화하면 메인 ON 상태에서 항상 신청 가능합니다.
         </p>
 
         <div class="input-group">
@@ -537,8 +536,8 @@
       const windowStartEl = document.getElementById('windowStart');
       const windowEndEl = document.getElementById('windowEnd');
 
-      // 즉시 차단 토글 표시
-      document.getElementById('signupBlockToggle').checked = settings.signupBlocked || false;
+      // 메인 토글 표시
+      document.getElementById('signupMainToggle').checked = settings.signupMainOn || false;
 
       // 일정 예약 토글은 사용자가 만진 후 저장 전이면 그대로 둠
       if (!enabledCheck.dataset.userTouched) {
@@ -559,18 +558,19 @@
         windowEndEl.value = window.end.substring(0, 16);
       }
 
-      // 상태 박스 - 즉시 차단이 우선
+      // 상태 박스 - 메인 OFF면 무조건 차단
       const nowK = getKSTNow();
-      const isBlocked = settings.signupBlocked;
+      const mainOn = settings.signupMainOn;
 
       let signupStatusHTML = '';
-      if (isBlocked) {
-        // 즉시 차단 ON이면 무조건 막힘
-        signupStatusHTML = '<strong style="color:#c62828; font-size:16px;">🚫 신청 즉시 차단 중</strong><br><small>관리자가 강제 차단한 상태입니다. 일정과 무관하게 신청 불가.</small>';
+      if (!mainOn) {
+        // 메인 OFF = 무조건 차단
+        signupStatusHTML = '<strong style="color:#c62828; font-size:16px;">🚫 수강신청 OFF</strong><br><small>관리자가 신청을 받지 않는 상태입니다.</small>';
         if (window && window.enabled) {
-          signupStatusHTML += `<br><small style="color:#999;">📅 예약된 일정: ${new Date(window.start).toLocaleString('ko-KR')} ~ ${new Date(window.end).toLocaleString('ko-KR')} (차단 해제 시 적용)</small>`;
+          signupStatusHTML += `<br><small style="color:#999;">📅 예약된 일정: ${new Date(window.start).toLocaleString('ko-KR')} ~ ${new Date(window.end).toLocaleString('ko-KR')} (메인 ON 시 적용)</small>`;
         }
       } else if (window && window.enabled) {
+        // 메인 ON + 일정 ON → 일정 따름
         if (nowK < new Date(window.start)) {
           signupStatusHTML = `<strong style="color:#f57c00;">⏳ 신청 대기 중</strong> (오픈까지 ${formatDuration(new Date(window.start) - nowK)} 남음)`;
         } else if (nowK > new Date(window.end)) {
@@ -580,7 +580,8 @@
         }
         signupStatusHTML += `<br><small>📅 일정: ${new Date(window.start).toLocaleString('ko-KR')} ~ ${new Date(window.end).toLocaleString('ko-KR')}</small>`;
       } else {
-        signupStatusHTML = '<strong style="color:#2e7d32;">🟢 항상 신청 가능</strong> <small>(시간 제한 없음)</small>';
+        // 메인 ON + 일정 OFF → 항상 가능
+        signupStatusHTML = '<strong style="color:#2e7d32;">🟢 항상 신청 가능</strong> <small>(일정 제한 없음)</small>';
       }
       windowStatusEl.innerHTML = signupStatusHTML;
     }
@@ -685,22 +686,22 @@
     };
 
     // ============== 신청 오픈 시간 ==============
-    // 즉시 차단 토글
-    document.getElementById('signupBlockToggle').onchange = async (e) => {
-      const isBlocked = e.target.checked;
-      const msg = isBlocked
-        ? '🚫 수강신청을 즉시 차단하시겠습니까?\n\n일정 예약과 무관하게 모든 신청이 막힙니다.'
-        : '즉시 차단을 해제하시겠습니까?\n\n일정 예약 설정이 다시 적용됩니다.';
+    // 메인 ON/OFF 토글
+    document.getElementById('signupMainToggle').onchange = async (e) => {
+      const isOn = e.target.checked;
+      const msg = isOn
+        ? '수강신청을 받겠습니까?\n\n일정 예약이 설정되어 있으면 그 일정을 따릅니다.'
+        : '🚫 수강신청을 OFF하시겠습니까?\n\n일정 예약과 무관하게 즉시 차단됩니다.';
       if (!confirm(msg)) {
-        e.target.checked = !isBlocked;
+        e.target.checked = !isOn;
         return;
       }
       try {
-        await setDoc(doc(db, 'settings', 'main'), { ...settings, signupBlocked: isBlocked }, { merge: true });
-        showToast(isBlocked ? '🚫 신청 즉시 차단됨' : '✅ 차단 해제됨', 'success');
+        await setDoc(doc(db, 'settings', 'main'), { ...settings, signupMainOn: isOn }, { merge: true });
+        showToast(isOn ? '✅ 수강신청 ON' : '🚫 수강신청 OFF', 'success');
       } catch (err) {
         showToast('오류: ' + err.message, 'error');
-        e.target.checked = !isBlocked;
+        e.target.checked = !isOn;
       }
     };
 
