@@ -435,19 +435,22 @@
       // 정정 모드 즉시 토글
       document.getElementById('editModeToggle').checked = settings.editMode || false;
 
-      // 정정 모드 일정 예약 표시
+      // 정정 모드 일정 예약 표시 (사용자가 수정 중일 땐 덮어쓰지 않음)
       const sched = settings.editSchedule;
       const schedCheck = document.getElementById('editScheduleEnabled');
       const schedDetails = document.getElementById('editScheduleDetails');
 
-      if (sched && sched.enabled) {
-        schedCheck.checked = true;
-        schedDetails.style.display = 'block';
-        if (sched.start) document.getElementById('editScheduleStart').value = sched.start.substring(0, 16);
-        if (sched.end) document.getElementById('editScheduleEnd').value = sched.end.substring(0, 16);
-      } else {
-        schedCheck.checked = false;
-        schedDetails.style.display = 'none';
+      // 토글 상태는 사용자가 만진 후 저장 전이면 그대로 둠
+      if (!schedCheck.dataset.userTouched) {
+        if (sched && sched.enabled) {
+          schedCheck.checked = true;
+          schedDetails.style.display = 'block';
+          if (sched.start) document.getElementById('editScheduleStart').value = sched.start.substring(0, 16);
+          if (sched.end) document.getElementById('editScheduleEnd').value = sched.end.substring(0, 16);
+        } else {
+          schedCheck.checked = false;
+          schedDetails.style.display = 'none';
+        }
       }
 
       // 정정 모드 상태 박스
@@ -489,12 +492,21 @@
       const detailsEl = document.getElementById('windowDetails');
       const windowStatusEl = document.getElementById('windowStatus');
 
-      if (window && window.enabled) {
-        enabledCheck.checked = true;
-        detailsEl.style.display = 'block';
-        if (window.start) document.getElementById('windowStart').value = window.start.substring(0, 16);
-        if (window.end) document.getElementById('windowEnd').value = window.end.substring(0, 16);
+      // 토글/입력값은 사용자가 만진 후 저장 전이면 그대로 둠
+      if (!enabledCheck.dataset.userTouched) {
+        if (window && window.enabled) {
+          enabledCheck.checked = true;
+          detailsEl.style.display = 'block';
+          if (window.start) document.getElementById('windowStart').value = window.start.substring(0, 16);
+          if (window.end) document.getElementById('windowEnd').value = window.end.substring(0, 16);
+        } else {
+          enabledCheck.checked = false;
+          detailsEl.style.display = 'none';
+        }
+      }
 
+      // 상태 박스는 항상 갱신 (이건 사용자 입력이 아님)
+      if (window && window.enabled) {
         const now = getKSTNow();
         const start = new Date(window.start);
         const end = new Date(window.end);
@@ -510,8 +522,6 @@
           오픈: ${start.toLocaleString('ko-KR')}<br>
           마감: ${end.toLocaleString('ko-KR')}`;
       } else {
-        enabledCheck.checked = false;
-        detailsEl.style.display = 'none';
         windowStatusEl.innerHTML = '<strong>현재 상태:</strong> 🟢 항상 신청 가능 (시간 제한 없음)';
       }
     }
@@ -547,6 +557,7 @@
 
     // ============== 정정 모드 일정 예약 ==============
     document.getElementById('editScheduleEnabled').onchange = (e) => {
+      e.target.dataset.userTouched = 'true';
       document.getElementById('editScheduleDetails').style.display = e.target.checked ? 'block' : 'none';
     };
 
@@ -571,6 +582,8 @@
           ? { enabled: true, start: new Date(start).toISOString(), end: new Date(end).toISOString() }
           : { enabled: false };
         await setDoc(doc(db, 'settings', 'main'), { ...settings, editSchedule: newEditSchedule }, { merge: true });
+        // 저장 완료 → 사용자 입력 플래그 해제 (이제 서버 값과 동기화)
+        delete document.getElementById('editScheduleEnabled').dataset.userTouched;
         showToast('저장되었습니다', 'success');
       } catch (err) {
         showToast('오류: ' + err.message, 'error');
@@ -579,6 +592,7 @@
 
     // ============== 신청 오픈 시간 ==============
     document.getElementById('windowEnabled').onchange = (e) => {
+      e.target.dataset.userTouched = 'true';
       document.getElementById('windowDetails').style.display = e.target.checked ? 'block' : 'none';
     };
 
@@ -603,6 +617,8 @@
           ? { enabled: true, start: new Date(start).toISOString(), end: new Date(end).toISOString() }
           : { enabled: false };
         await setDoc(doc(db, 'settings', 'main'), { ...settings, signupOpen: newSignupOpen }, { merge: true });
+        // 저장 완료 → 사용자 입력 플래그 해제
+        delete document.getElementById('windowEnabled').dataset.userTouched;
         showToast('저장되었습니다', 'success');
       } catch (err) {
         showToast('오류: ' + err.message, 'error');
