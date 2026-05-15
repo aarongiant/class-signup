@@ -571,10 +571,36 @@
       }
     };
 
+    // Date 객체 → "YYYY-MM-DDTHH:MM" 형식 (datetime-local input용, 로컬시간 기준)
+    function toDatetimeLocalString(date) {
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+
+    // 시작/종료 시각 입력란을 "지금 ~ 5분 후"로 자동 채움 (비어있을 때만)
+    function autoFillTimeInputs(startEl, endEl) {
+      const now = new Date();
+      const fivelater = new Date(now.getTime() + 5 * 60 * 1000);
+      if (!startEl.value) {
+        startEl.value = toDatetimeLocalString(now);
+      }
+      if (!endEl.value) {
+        endEl.value = toDatetimeLocalString(fivelater);
+      }
+    }
+
     // ============== 정정 모드 일정 예약 ==============
     document.getElementById('editScheduleEnabled').onchange = (e) => {
       e.target.dataset.userTouched = 'true';
-      document.getElementById('editScheduleDetails').style.display = e.target.checked ? 'block' : 'none';
+      const details = document.getElementById('editScheduleDetails');
+      details.style.display = e.target.checked ? 'block' : 'none';
+      // ON으로 켜는 순간, 시간 입력란이 비어있으면 자동으로 채워줌
+      if (e.target.checked) {
+        autoFillTimeInputs(
+          document.getElementById('editScheduleStart'),
+          document.getElementById('editScheduleEnd')
+        );
+      }
     };
     // 시간 입력란이 변경되면 사용자 수정 플래그 설정
     document.getElementById('editScheduleStart').oninput = (e) => {
@@ -618,7 +644,15 @@
     // ============== 신청 오픈 시간 ==============
     document.getElementById('windowEnabled').onchange = (e) => {
       e.target.dataset.userTouched = 'true';
-      document.getElementById('windowDetails').style.display = e.target.checked ? 'block' : 'none';
+      const details = document.getElementById('windowDetails');
+      details.style.display = e.target.checked ? 'block' : 'none';
+      // ON으로 켜는 순간, 시간 입력란이 비어있으면 자동으로 채워줌
+      if (e.target.checked) {
+        autoFillTimeInputs(
+          document.getElementById('windowStart'),
+          document.getElementById('windowEnd')
+        );
+      }
     };
     document.getElementById('windowStart').oninput = (e) => {
       e.target.dataset.userTouched = 'true';
