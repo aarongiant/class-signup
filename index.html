@@ -161,12 +161,12 @@
     <!-- 정정 모드 배너 -->
     <div class="edit-mode-banner" id="editModeBanner" style="display:none;">
       <h3>⚠️ 수강정정 모드</h3>
-      <p>본인이 신청한 수업을 클릭해서 취소하고, 빈 시간을 클릭해서 다시 신청하세요.<br>
-         <strong>취소 횟수 = 신청 횟수</strong>가 같아야 변경할 수 있습니다.</p>
+      <p>본인 수업 <strong>1개</strong>를 클릭해 취소하고, 빈 슬롯 <strong>1개</strong>를 클릭해 새로 신청하세요.<br>
+         <small style="color:#666;">한 번에 1건의 레슨씩만 조정할 수 있습니다. 여러 건을 정정하려면 반복하세요.</small></p>
       <div id="editScheduleCountdown" style="margin-top: 8px; font-weight: bold; color: #856404;"></div>
-      <div class="edit-mode-status">
-        <div>취소: <span class="count" id="cancelCount">0</span>건</div>
-        <div>신청: <span class="count" id="newCount">0</span>건</div>
+      <div class="edit-mode-status" id="editStatusBox">
+        <div>취소예정: <span id="cancelStatus" style="font-weight:bold; color:#999;">없음</span></div>
+        <div>신청예정: <span id="bookStatus" style="font-weight:bold; color:#999;">없음</span></div>
       </div>
       <button class="confirm-edit-btn" id="confirmEditBtn" disabled>변경 확정</button>
     </div>
@@ -637,11 +637,32 @@
     }
 
     function updateEditModeStatus() {
-      document.getElementById('cancelCount').textContent = editModeData.toCancel.length;
-      document.getElementById('newCount').textContent = editModeData.toBook.length;
+      const cancelStatus = document.getElementById('cancelStatus');
+      const bookStatus = document.getElementById('bookStatus');
       const btn = document.getElementById('confirmEditBtn');
-      btn.disabled = !(editModeData.toCancel.length > 0 &&
-                       editModeData.toCancel.length === editModeData.toBook.length);
+
+      // 취소예정 표시
+      if (editModeData.toCancel.length === 0) {
+        cancelStatus.textContent = '없음';
+        cancelStatus.style.color = '#999';
+      } else {
+        const c = editModeData.toCancel[0];
+        cancelStatus.textContent = `${formatDateForMessage(c.date)} ${formatTime(c.time)}`;
+        cancelStatus.style.color = '#c62828';
+      }
+
+      // 신청예정 표시
+      if (editModeData.toBook.length === 0) {
+        bookStatus.textContent = '없음';
+        bookStatus.style.color = '#999';
+      } else {
+        const b = editModeData.toBook[0];
+        bookStatus.textContent = `${formatDateForMessage(b.date)} ${formatTime(b.time)}`;
+        bookStatus.style.color = '#1a4d8f';
+      }
+
+      // 변경 확정 버튼: 둘 다 1개씩 선택됐을 때만 활성화
+      btn.disabled = !(editModeData.toCancel.length === 1 && editModeData.toBook.length === 1);
     }
 
     function isSignupOpen() {
@@ -878,7 +899,15 @@
         document.getElementById('signupModal').classList.remove('active');
         showToast(`✅ ${name}님 신청 완료!`, 'success');
       } catch (err) {
-        showToast('❌ ' + err.message, 'error');
+        // "이미 신청된 시간입니다" → 더 친절한 메시지로 안내
+        if (err.message && err.message.includes('이미 신청')) {
+          document.getElementById('signupModal').classList.remove('active');
+          alert(`😢 아쉽지만 다른 수강생이 한 발 빨랐습니다.\n\n${pendingSlot.date} ${formatTime(pendingSlot.slot.time)}은(는) 방금 마감되었어요.\n다른 시간을 선택해주세요.`);
+          // 달력 즉시 새로고침 (실시간 onSnapshot이 이미 갱신했겠지만 명시적으로)
+          renderCalendar();
+        } else {
+          showToast('❌ ' + err.message, 'error');
+        }
       } finally {
         btn.disabled = false;
         btn.textContent = '신청하기';
@@ -923,8 +952,14 @@
       const slotId = `${date}_${slot.time}`;
       const idx = editModeData.toCancel.findIndex(s => s.id === slotId);
       if (idx >= 0) {
+        // 이미 선택된 것 클릭 → 해제
         editModeData.toCancel.splice(idx, 1);
       } else {
+        // 새로 선택 - 이미 1개 있으면 차단
+        if (editModeData.toCancel.length >= 1) {
+          showToast('한 번에 1건의 레슨씩만 조정할 수 있습니다', 'error');
+          return;
+        }
         editModeData.toCancel.push({
           id: slotId, date, time: slot.time, name: slot.bookedBy
         });
@@ -937,8 +972,14 @@
       const slotId = `${date}_${slot.time}`;
       const idx = editModeData.toBook.findIndex(s => s.id === slotId);
       if (idx >= 0) {
+        // 이미 선택된 것 클릭 → 해제
         editModeData.toBook.splice(idx, 1);
       } else {
+        // 새로 선택 - 이미 1개 있으면 차단
+        if (editModeData.toBook.length >= 1) {
+          showToast('한 번에 1건의 레슨씩만 조정할 수 있습니다', 'error');
+          return;
+        }
         editModeData.toBook.push({
           id: slotId, date, time: slot.time, name: editModeData.studentName
         });
@@ -948,26 +989,51 @@
     }
 
     document.getElementById('confirmEditBtn').onclick = async () => {
-      if (editModeData.toCancel.length !== editModeData.toBook.length) return;
-      if (editModeData.toCancel.length === 0) return;
+      // 1건씩만 처리 - 둘 다 정확히 1개씩 선택되어야 함
+      if (editModeData.toCancel.length !== 1 || editModeData.toBook.length !== 1) return;
 
-      const confirmMsg = `${editModeData.studentName}님의 변경을 확정하시겠습니까?\n\n` +
-        `취소: ${editModeData.toCancel.length}건\n` +
-        `신청: ${editModeData.toBook.length}건\n\n` +
+      const cancelItem = editModeData.toCancel[0];
+      const bookItem = editModeData.toBook[0];
+
+      const confirmMsg = `${editModeData.studentName}님, 다음과 같이 변경하시겠습니까?\n\n` +
+        `취소: ${formatDateForMessage(cancelItem.date)} ${formatTime(cancelItem.time)}\n` +
+        `신청: ${formatDateForMessage(bookItem.date)} ${formatTime(bookItem.time)}\n\n` +
         `확정 후 되돌릴 수 없습니다.`;
       if (!confirm(confirmMsg)) return;
 
       const btn = document.getElementById('confirmEditBtn');
       btn.disabled = true;
-      btn.textContent = '처리 중...';
+      btn.textContent = '확인 중...';
 
       try {
-        for (const item of editModeData.toCancel) {
-          await cancelSlot(item.date, item.time, editModeData.studentName);
+        // === 1단계: 사전 검증 - 최신 상태 확인 ===
+        const conflicts = await validateEditChanges();
+
+        if (conflicts.length > 0) {
+          // 충돌 발견 - 사용자에게 안내 (1건뿐이라 메시지도 단순)
+          const c = conflicts[0];
+          alert(`😢 정정 충돌이 발생했습니다\n\n` +
+            `${formatDateForMessage(c.date)} ${formatTime(c.time)} 일정이 ` +
+            `${c.reason === '다른 수강생이 선점' ? '방금 다른 수강생에 의해 선점되었습니다' : c.reason + '입니다'}.\n\n` +
+            `다른 시간을 선택해주세요. 달력을 새로고침합니다.`);
+
+          // 충돌난 신청예정 제거 (취소예정은 그대로 유지 - 본인 거니까)
+          if (c.type === 'book') {
+            editModeData.toBook = [];
+          } else {
+            editModeData.toCancel = [];
+          }
+
+          renderCalendar();
+          updateEditModeStatus();
+          return; // 아무것도 처리 안 함
         }
-        for (const item of editModeData.toBook) {
-          await bookSlot(item.date, item.time, item.name, true); // 정정 모드 플래그
-        }
+
+        // === 2단계: 충돌 없음 - 실제 처리 ===
+        btn.textContent = '처리 중...';
+        await cancelSlot(cancelItem.date, cancelItem.time, editModeData.studentName);
+        await bookSlot(bookItem.date, bookItem.time, bookItem.name, true);
+
         editModeData.toCancel = [];
         editModeData.toBook = [];
         renderCalendar();
@@ -980,6 +1046,67 @@
         btn.textContent = '변경 확정';
       }
     };
+
+    // 정정 사전 검증 - 1건 단위
+    async function validateEditChanges() {
+      const conflicts = [];
+
+      // 취소 슬롯 검증
+      for (const item of editModeData.toCancel) {
+        const mKey = item.date.substring(0, 7);
+        const daySnap = await getDoc(doc(db, 'months', mKey, 'days', item.date));
+        if (!daySnap.exists()) {
+          conflicts.push({ ...item, type: 'cancel', reason: '날짜 정보 없음' });
+          continue;
+        }
+        const data = daySnap.data();
+        if (data.isHoliday) {
+          conflicts.push({ ...item, type: 'cancel', reason: '휴일로 변경됨' });
+          continue;
+        }
+        const slot = (data.slots || []).find(s => s.time === item.time);
+        if (!slot) {
+          conflicts.push({ ...item, type: 'cancel', reason: '시간대 삭제됨' });
+          continue;
+        }
+        if (slot.bookedBy !== editModeData.studentName) {
+          conflicts.push({ ...item, type: 'cancel', reason: '본인 신청 아님' });
+        }
+      }
+
+      // 신청 슬롯 검증
+      for (const item of editModeData.toBook) {
+        const mKey = item.date.substring(0, 7);
+        const daySnap = await getDoc(doc(db, 'months', mKey, 'days', item.date));
+        if (!daySnap.exists()) {
+          conflicts.push({ ...item, type: 'book', reason: '날짜 정보 없음' });
+          continue;
+        }
+        const data = daySnap.data();
+        if (data.isHoliday) {
+          conflicts.push({ ...item, type: 'book', reason: '휴일로 변경됨' });
+          continue;
+        }
+        const slot = (data.slots || []).find(s => s.time === item.time);
+        if (!slot) {
+          conflicts.push({ ...item, type: 'book', reason: '시간대 삭제됨' });
+          continue;
+        }
+        const isOwnCancel = editModeData.toCancel.some(c => c.date === item.date && c.time === item.time);
+        if (slot.bookedBy && !isOwnCancel) {
+          conflicts.push({ ...item, type: 'book', reason: '다른 수강생이 선점' });
+        }
+      }
+
+      return conflicts;
+    }
+
+    // 날짜를 사용자 친화 문구로
+    function formatDateForMessage(dateStr) {
+      // "2026-05-15" → "5월 15일"
+      const parts = dateStr.split('-');
+      return `${parseInt(parts[1])}월 ${parseInt(parts[2])}일`;
+    }
 
     async function cancelSlot(date, time, expectedName) {
       const mKey = date.substring(0, 7);
