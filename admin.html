@@ -576,24 +576,27 @@
               dayData.slots.forEach(slot => {
                 const entry = document.createElement('div');
                 entry.className = 'time-entry';
+                const text = document.createElement('span');
                 if (slot.bookedBy) {
                   const c = nameToColor(slot.bookedBy);
                   entry.style.background = c.bg;
                   entry.style.color = c.fg;
-                  const text = document.createElement('span');
                   text.textContent = `${formatTime(slot.time)} ${slot.bookedBy}`;
-                  entry.appendChild(text);
                 } else {
                   entry.classList.add('empty');
-                  const text = document.createElement('span');
                   text.textContent = formatTime(slot.time);
-                  entry.appendChild(text);
-                  const rm = document.createElement('button');
-                  rm.className = 'remove-btn';
-                  rm.textContent = '✕';
-                  rm.onclick = () => removeTime(cell.fullDate, slot.time);
-                  entry.appendChild(rm);
                 }
+                entry.appendChild(text);
+                // 신청자 있어도 ✕ 버튼 표시 (클릭 시 경고 떠서 안전)
+                const rm = document.createElement('button');
+                rm.className = 'remove-btn';
+                rm.textContent = '✕';
+                if (slot.bookedBy) {
+                  rm.style.color = '#b71c1c';
+                  rm.title = `${slot.bookedBy}님 신청 - 클릭 시 경고`;
+                }
+                rm.onclick = () => removeTime(cell.fullDate, slot.time);
+                entry.appendChild(rm);
                 cellDiv.appendChild(entry);
               });
             }
