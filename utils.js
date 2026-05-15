@@ -59,3 +59,26 @@ export function addMinutes(hhmm, minutes) {
   while (h >= 24) h -= 24;
   return String(h).padStart(2, '0') + String(m).padStart(2, '0');
 }
+
+// 고전 인물/설화 캐릭터 가명 풀
+const ALIAS_POOL = [
+  '홍길동', '심청이', '임꺽정', '춘향이', '몽룡이', '흥부', '놀부',
+  '콩쥐', '팥쥐', '장화', '홍련', '바리공주', '연오랑', '세오녀',
+  '견우', '직녀', '나무꾼', '선녀', '도깨비', '두꺼비',
+  '주몽', '온달', '평강공주', '서동', '선화공주', '계백',
+  '김유신', '문무왕', '원효', '의상', '혜초', '최치원',
+  '장보고', '왕건', '강감찬', '서희', '윤관', '최영',
+  '정몽주', '이방원', '황희', '맹사성', '이순신', '권율',
+  '곽재우', '김시민', '논개', '신사임당', '허난설헌', '황진이'
+];
+
+// 이름을 받아서 일관된 가명 반환 (같은 이름 → 항상 같은 가명)
+export function nameToAlias(name) {
+  if (!name) return '익명';
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    hash = hash & hash;
+  }
+  return ALIAS_POOL[Math.abs(hash) % ALIAS_POOL.length];
+}

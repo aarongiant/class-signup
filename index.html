@@ -176,7 +176,7 @@
 
     <!-- 신청자 색상 범례 -->
     <div class="student-legend" id="studentLegend" style="display:none;">
-      <h4>📌 신청자별 색상</h4>
+      <h4>📌 신청자별 색상 <small style="font-weight:normal; color:#999;">(타 수강생은 가명으로 표시됩니다)</small></h4>
       <div class="legend-items" id="legendItems"></div>
     </div>
 
@@ -226,7 +226,7 @@
 
   <script type="module">
     import { db } from './firebase-config.js?v=20260516a';
-    import { nameToColor, getKSTNow, dateKey, monthKey, formatTime } from './utils.js?v=20260516a';
+    import { nameToColor, nameToAlias, getKSTNow, dateKey, monthKey, formatTime } from './utils.js?v=20260516a';
     import {
       collection, doc, getDoc, getDocs, setDoc, deleteDoc, updateDoc,
       onSnapshot, runTransaction
@@ -724,7 +724,9 @@
         item.style.background = c.bg;
         item.style.color = c.fg;
         item.style.border = `1px solid ${c.border}`;
-        item.textContent = name;
+        // 본인이면 본명, 타인이면 가명
+        const isOwn = currentUser && name === currentUser.name;
+        item.textContent = isOwn ? `${name} (나)` : nameToAlias(name);
         itemsEl.appendChild(item);
       });
     }
@@ -829,7 +831,10 @@
         el.style.background = c.bg;
         el.style.color = c.fg;
         el.style.borderColor = c.border;
-        el.textContent = `${timeDisplay} ${slot.bookedBy}`;
+        // 본인이면 본명, 타인이면 가명 표시
+        const isOwn = currentUser && slot.bookedBy === currentUser.name;
+        const displayName = isOwn ? slot.bookedBy : nameToAlias(slot.bookedBy);
+        el.textContent = `${timeDisplay} ${displayName}`;
       }
 
       if (isEditModeEffective()) {
